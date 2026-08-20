@@ -1,0 +1,225 @@
+/* FullCalendar — Google Calendar style */
+
+/* Base */
+.fc {
+  --fc-border-color: rgba(0, 0, 0, 0.06);
+  --fc-today-bg-color: transparent;
+  --fc-neutral-bg-color: transparent;
+  --fc-page-bg-color: transparent;
+  --fc-event-border-color: transparent;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.dark .fc {
+  --fc-border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Header toolbar */
+.fc .fc-toolbar {
+  margin-bottom: 16px !important;
+  gap: 12px;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.25rem !important;
+  font-weight: 500 !important;
+  color: var(--text-primary);
+}
+
+/* Buttons base */
+.fc .fc-button {
+  background: transparent !important;
+  border: 1px solid var(--border-primary) !important;
+  color: var(--text-secondary) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding: 6px 14px !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  text-transform: none !important;
+  transition: all 0.15s;
+}
+
+.fc .fc-button:hover {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+}
+
+.fc .fc-button:focus {
+  box-shadow: none !important;
+}
+
+/* Active view button — pill style orange */
+.fc .fc-button-active {
+  background: #A31CDC !important;
+  border-color: #A31CDC !important;
+  color: white !important;
+}
+
+.fc .fc-button-active:hover {
+  background: #d47a25 !important;
+  border-color: #d47a25 !important;
+  color: white !important;
+}
+
+/* Today button */
+.fc .fc-today-button {
+  border-radius: 20px !important;
+  padding: 6px 18px !important;
+}
+
+.fc .fc-today-button:disabled {
+  opacity: 0.4 !important;
+}
+
+/* Prev/Next */
+.fc .fc-prev-button,
+.fc .fc-next-button {
+  padding: 6px 8px !important;
+  border: none !important;
+}
+
+/* Button group — pill toggle */
+.fc .fc-button-group {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.fc .fc-button-group .fc-button {
+  border-radius: 0 !important;
+}
+
+.fc .fc-button-group .fc-button:first-child {
+  border-radius: 8px 0 0 8px !important;
+}
+
+.fc .fc-button-group .fc-button:last-child {
+  border-radius: 0 8px 8px 0 !important;
+}
+
+/* Column headers (day names) */
+.fc .fc-col-header-cell {
+  padding: 8px 0 !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--fc-border-color) !important;
+}
+
+.dark .fc .fc-col-header-cell {
+  color: #8B9BB4;
+}
+
+/* Today highlight — orange circle */
+.fc .fc-daygrid-day-number {
+  font-size: 13px;
+  padding: 4px 8px;
+}
+
+.fc .fc-day-today .fc-daygrid-day-number {
+  background: #A31CDC;
+  color: white !important;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 4px;
+}
+
+.fc .fc-timegrid-col.fc-day-today {
+  background: rgba(163, 28, 220, 0.03) !important;
+}
+
+.dark .fc .fc-timegrid-col.fc-day-today {
+  background: rgba(163, 28, 220, 0.05) !important;
+}
+
+/* Time grid slot labels */
+.fc .fc-timegrid-slot-label {
+  font-size: 11px !important;
+  color: var(--text-tertiary) !important;
+}
+
+.dark .fc .fc-timegrid-slot-label {
+  color: #8B9BB4 !important;
+}
+
+/* Slot hover */
+.fc .fc-timegrid-slot:hover {
+  background: rgba(163, 28, 220, 0.05);
+}
+
+.dark .fc .fc-timegrid-slot:hover {
+  background: rgba(163, 28, 220, 0.1);
+}
+
+/* Events */
+.fc .fc-event {
+  border-radius: 4px !important;
+  border: none !important;
+  padding: 2px 4px !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  transition: opacity 0.15s;
+}
+
+.fc .fc-event:hover {
+  opacity: 0.85;
+}
+
+.fc .fc-daygrid-event {
+  border-radius: 4px !important;
+  padding: 1px 4px !important;
+}
+
+/* Now indicator — red line */
+.fc .fc-timegrid-now-indicator-line {
+  border-color: #EF4444 !important;
+  border-width: 2px 0 0 0 !important;
+}
+
+.fc .fc-timegrid-now-indicator-arrow {
+  border-color: #EF4444 !important;
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+}
+
+/* Scrollbar */
+.fc .fc-scroller::-webkit-scrollbar {
+  width: 6px;
+}
+
+.fc .fc-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fc .fc-scroller::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.dark .fc .fc-scroller::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* All day slot */
+.fc .fc-timegrid-divider {
+  display: none;
+}
+
+/* Day grid cells */
+.fc .fc-daygrid-day {
+  min-height: 100px;
+}
+
+/* More link */
+.fc .fc-more-link {
+  color: #A31CDC !important;
+  font-size: 11px;
+  font-weight: 500;
+}
