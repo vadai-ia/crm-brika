@@ -14,9 +14,11 @@ import {
   Trees,
   Car,
   Warehouse,
+  FileOutput,
 } from 'lucide-react'
 import type { Property, UserRole } from '@/types'
 import { formatPrice, formatM2, formatComision, capitalize } from '@/lib/utils/format'
+import { PropertyDetailGallery } from './PropertyDetailGallery'
 
 interface PropertyDetailProps {
   property: Property
@@ -24,6 +26,8 @@ interface PropertyDetailProps {
   onClose: () => void
   onEdit?: (property: Property) => void
   onDelete?: (property: Property) => void
+  /** "Crear PDF": lleva al módulo de fichas con solo esta propiedad. */
+  onCreatePdf?: (property: Property) => void
   visibleColumnNames?: Set<string>
 }
 
@@ -93,7 +97,7 @@ function IconField({
   )
 }
 
-export function PropertyDetail({ property, role, onClose, onEdit, onDelete, visibleColumnNames }: PropertyDetailProps) {
+export function PropertyDetail({ property, role, onClose, onEdit, onDelete, onCreatePdf, visibleColumnNames }: PropertyDetailProps) {
   const isAdmin = role === 'admin'
   const show = (col: string) => isAdmin || !visibleColumnNames || visibleColumnNames.has(col)
 
@@ -199,6 +203,17 @@ export function PropertyDetail({ property, role, onClose, onEdit, onDelete, visi
             )}
           </div>
           <div className="flex items-center gap-2">
+            {onCreatePdf && (
+              <button
+                onClick={() => onCreatePdf(property)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white
+                  bg-orange rounded-[var(--radius-sm)] hover:bg-orange-hover transition-colors cursor-pointer"
+                title="Crear la ficha PDF de esta propiedad"
+              >
+                <FileOutput className="w-3.5 h-3.5" strokeWidth={1.5} />
+                Crear PDF
+              </button>
+            )}
             <button
               onClick={handleCopyLink}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary
@@ -252,6 +267,9 @@ export function PropertyDetail({ property, role, onClose, onEdit, onDelete, visi
 
         {/* Body */}
         <div className="px-6 py-4">
+          {/* Fotos (orden y visibilidad para la web) */}
+          <PropertyDetailGallery propertyId={String(property.id)} />
+
           {/* Badges + Price */}
           <div className="flex items-center gap-2 flex-wrap pb-5">
             {show('disponibilidad') && property.disponibilidad && (

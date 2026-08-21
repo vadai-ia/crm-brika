@@ -1,10 +1,11 @@
 'use client'
 
-import { Loader2, Link as LinkIcon, AlertTriangle } from 'lucide-react'
+import { Loader2, Link as LinkIcon, Info } from 'lucide-react'
 import type { CartaFormState, CartaProperty } from '@/types/carta-propuesta'
 import { PropertyPicker } from './PropertyPicker'
-import { MoneyField } from './MoneyField'
-import { isUrl } from './cartaFormState'
+import { OperacionToggle } from './OperacionToggle'
+import { CheckField, NumberField, OPTIONAL_HINT, SectionTitle, TextArea, TextField } from './CartaFormSections'
+import { operacionFromInventario } from './cartaFormState'
 
 interface CartaFormProps {
   form: CartaFormState
@@ -17,35 +18,32 @@ interface CartaFormProps {
   onGenerate: () => void
 }
 
-const OPTIONAL_HINT = 'Los campos vacíos o en 0 no aparecen en la carta.'
+type TextKey = {
+  [K in keyof CartaFormState]: CartaFormState[K] extends string ? K : never
+}[keyof CartaFormState]
 
-function TextField({
-  label, value, onChange, placeholder, required,
-}: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; required?: boolean }) {
-  return (
-    <div>
-      <label className="brika-label">{label}{required ? ' *' : ''}</label>
-      <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="brika-input" />
-    </div>
-  )
-}
+const GRID = 'grid grid-cols-1 md:grid-cols-2 gap-3'
 
-function SectionTitle({ title, hint, children }: { title: string; hint?: string; children?: React.ReactNode }) {
-  return (
-    <div className="mb-3">
-      <h2 className="text-sm font-semibold text-text-primary flex items-center gap-1.5">{title}{children}</h2>
-      {hint && <p className="text-xs text-text-tertiary mt-0.5">{hint}</p>}
-    </div>
-  )
-}
-
+/** Formulario de la Carta Propuesta: mismos campos que la plantilla BRIKA, prellenados desde el inventario. */
 export function CartaForm({
   form, onChange, onSelectProperty, focusedKey, setFocusedKey, canGenerate, generating, onGenerate,
 }: CartaFormProps) {
   const p = form.selectedProperty
-  // Venta / Preventa → propuesta de compra. Renta / Build to Suit → avisar.
-  const esCompra = !p?.operacion || /venta/i.test(p.operacion)
-  const ubicacionEsLink = isUrl(p?.ubicacion)
+  const esRenta = form.operacion === 'renta'
+  const difiereDeInventario = p?.operacion && operacionFromInventario(p.operacion) !== form.operacion
+  const prefilled = p ? (
+    <span className="text-[11px] font-normal text-text-tertiary flex items-center gap-1">
+      <LinkIcon className="w-3 h-3" strokeWidth={1.5} />
+      prellenado
+    </span>
+  ) : null
+
+  const text = (key: TextKey, label: string, placeholder?: string, extra?: { required?: boolean; hint?: string }) => (
+    <TextField label={label} value={form[key]} onChange={(v) => onChange(key, v)} placeholder={placeholder} required={extra?.required} hint={extra?.hint} />
+  )
+  const number = (key: TextKey, label: string, extra?: { hint?: string; suffix?: string }) => (
+    <NumberField label={label} id={key} value={form[key]} onChange={(v) => onChange(key, v)} focusedKey={focusedKey} setFocusedKey={setFocusedKey} hint={extra?.hint} suffix={extra?.suffix} />
+  )
 
   return (
     <div className="brika-card p-6 space-y-6 max-w-4xl">
@@ -53,47 +51,39 @@ export function CartaForm({
       <section>
         <SectionTitle title="Selecciona una propiedad *" />
         <PropertyPicker selectedId={p?.id ?? null} onSelect={onSelectProperty} />
-        {p && !esCompra && (
-          <div className="mt-3 flex items-start gap-2 p-3 rounded-[var(--radius-sm)] bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
-            <p className="text-xs">
-              Esta propiedad está en <strong>{p.operacion}</strong>. La carta es una propuesta de compra: captura el valor de la inversión a mano.
-            </p>
-          </div>
+      </section>
+
+      {/* 2. Tipo de operación */}
+      <section>
+        <SectionTitle title="Tipo de operación" hint="Cambia la redacción de la carta y los términos que se capturan." />
+        <OperacionToggle value={form.operacion} onChange={(v) => onChange('operacion', v)} />
+        {difiereDeInventario && (
+          <p className="mt-2 flex items-center gap-1.5 text-[11px] text-text-tertiary">
+            <Info className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.5} />
+            En el inventario esta propiedad está en <strong className="mx-1">{p?.operacion}</strong>; la carta se generará como {esRenta ? 'renta' : 'compra'}.
+          </p>
         )}
       </section>
 
-      {/* 2. Asesor + cliente */}
+      {/* 3. Destinatario y cliente */}
       <section>
-        <SectionTitle title="Partes" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <TextField label="Nombre del asesor" required value={form.nombreAsesor} onChange={(v) => onChange('nombreAsesor', v)} placeholder="Nombre del asesor" />
-          <TextField label="Nombre del cliente" required value={form.nombreCliente} onChange={(v) => onChange('nombreCliente', v)} placeholder="Nombre completo del comprador" />
+        <SectionTitle title="Destinatario y cliente" hint="A quién va dirigida la carta y a quién representa BRIKA.">{prefilled}</SectionTitle>
+        <div className={GRID}>
+          {text('destinatarioNombre', 'Nombre del destinatario', 'Persona a quien va dirigida', { hint: 'Encabeza la carta y el saludo ("Estimado(a) …").' })}
+          {text('destinatarioCargo', 'Cargo del destinatario', 'Director Comercial / Representante Legal')}
+          {text('destinatarioEmpresa', 'Desarrollo / parque industrial / empresa', 'Nombre del desarrollo o empresa')}
+          {text('nombreCliente', 'Cliente representado', 'Nombre del cliente o empresa', { required: true })}
         </div>
       </section>
 
-      {/* 3. Datos de la propiedad */}
+      {/* 4. Inmueble */}
       <section>
-        <SectionTitle title="Datos de la propiedad" hint={OPTIONAL_HINT}>
-          {p && (
-            <span className="text-[11px] font-normal text-text-tertiary flex items-center gap-1">
-              <LinkIcon className="w-3 h-3" strokeWidth={1.5} />
-              prellenado
-            </span>
-          )}
-        </SectionTitle>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <TextField label="Dirección" value={form.direccion} onChange={(v) => onChange('direccion', v)} placeholder="Calle, número, colonia…" />
-            {ubicacionEsLink && (
-              <p className="text-[11px] text-text-tertiary mt-1">
-                El inventario solo tiene un <a href={p?.ubicacion ?? '#'} target="_blank" rel="noreferrer" className="text-orange hover:underline">link de Maps</a>; escribe la dirección si la tienes.
-              </p>
-            )}
-          </div>
-          <TextField label="Parque" value={form.parque} onChange={(v) => onChange('parque', v)} placeholder="Parque industrial" />
-          <TextField label="Unidad" value={form.unidad} onChange={(v) => onChange('unidad', v)} placeholder="Nave / lote" />
-          <TextField label="Nombre del desarrollador / propietario" value={form.nombrePropietario} onChange={(v) => onChange('nombrePropietario', v)} placeholder="A quién va dirigida la oferta" />
+        <SectionTitle title="Inmueble" hint={OPTIONAL_HINT}>{prefilled}</SectionTitle>
+        <div className={GRID}>
+          <TextArea label="Descripción del inmueble" value={form.inmuebleDescripcion} onChange={(v) => onChange('inmuebleDescripcion', v)} placeholder="Nave / lote — superficie, ubicación general" rows={2} />
+          {number('superficie', 'Superficie', { suffix: 'm²', hint: 'Se usa para calcular el precio por m².' })}
+          {text('parque', 'Parque', 'Parque industrial')}
+          {text('unidad', 'Unidad', 'Nave / lote')}
         </div>
         {p && (p.municipio || p.estado) && (
           <p className="text-[11px] text-text-tertiary mt-2">
@@ -102,23 +92,52 @@ export function CartaForm({
         )}
       </section>
 
-      {/* 4. Datos financieros */}
+      {/* 5. Términos (cambian con el tipo de operación) */}
       <section>
-        <SectionTitle title="Datos financieros" hint={OPTIONAL_HINT} />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <MoneyField label="Valor de la inversión (MXN)" id="valorInversion" value={form.valorInversion} onChange={(v) => onChange('valorInversion', v)} focusedKey={focusedKey} setFocusedKey={setFocusedKey} />
-          <MoneyField label="Cantidad apartado (MXN)" id="apartado" value={form.apartado} onChange={(v) => onChange('apartado', v)} focusedKey={focusedKey} setFocusedKey={setFocusedKey} />
-          <MoneyField label="Enganche (MXN)" id="enganche" value={form.enganche} onChange={(v) => onChange('enganche', v)} focusedKey={focusedKey} setFocusedKey={setFocusedKey} />
-          <MoneyField label="Porcentaje enganche (%)" id="pctEnganche" value={form.pctEnganche} onChange={(v) => onChange('pctEnganche', v)} focusedKey={focusedKey} setFocusedKey={setFocusedKey} hint="El saldo restante se calcula como 100 − este porcentaje." />
-          <MoneyField label="Mensualidades (número)" id="mensualidades" value={form.mensualidades} onChange={(v) => onChange('mensualidades', v)} focusedKey={focusedKey} setFocusedKey={setFocusedKey} />
-          <MoneyField label="Monto de cada mensualidad (MXN)" id="montoMensualidades" value={form.montoMensualidades} onChange={(v) => onChange('montoMensualidades', v)} focusedKey={focusedKey} setFocusedKey={setFocusedKey} />
-          <MoneyField label="Pago a la escritura (MXN)" id="pagoEscritura" value={form.pagoEscritura} onChange={(v) => onChange('pagoEscritura', v)} focusedKey={focusedKey} setFocusedKey={setFocusedKey} />
+        <SectionTitle title={esRenta ? 'Términos de la renta' : 'Términos de la compra'} hint={OPTIONAL_HINT} />
+        <div className={GRID}>
+          {esRenta ? (
+            <>
+              {number('rentaMensual', 'Renta mensual propuesta', { suffix: 'MXN', hint: 'La carta agrega el precio por m² si hay superficie.' })}
+              <CheckField label="Más IVA" checked={form.rentaMasIva} onChange={(v) => onChange('rentaMasIva', v)} hint="Imprime “+ IVA” junto a la renta." />
+              {number('plazoAnios', 'Plazo forzoso del contrato', { suffix: 'años' })}
+              {number('depositoMeses', 'Depósito en garantía', { suffix: 'meses', hint: 'Se expresa como meses de renta.' })}
+              {text('incrementoAnual', 'Incremento anual', 'INPC / % fijo')}
+            </>
+          ) : (
+            <>
+              {number('precioCompra', 'Precio de compra propuesto', { suffix: 'MXN', hint: 'La carta agrega el precio por m² si hay superficie.' })}
+              {text('formaPago', 'Forma de pago', 'Contado / Enganche + financiamiento a X meses')}
+              {number('enganchePct', 'Enganche', { suffix: '%', hint: 'La carta calcula el monto sobre el precio propuesto.' })}
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* 6. Condiciones y vigencia */}
+      <section>
+        <SectionTitle title="Condiciones y vigencia" hint={OPTIONAL_HINT} />
+        <div className={GRID}>
+          {text('fechaInicio', 'Fecha estimada de inicio / cierre', 'Fecha o "A definir tras aceptación"')}
+          {number('vigenciaDias', 'Vigencia de esta propuesta', { suffix: 'días', hint: 'Días naturales a partir de la fecha de expedición.' })}
+          <TextArea label="Condiciones especiales" value={form.condicionesEspeciales} onChange={(v) => onChange('condicionesEspeciales', v)} placeholder="Mejoras al inmueble, periodo de gracia, opción a compra, exclusividad… (si aplica)" />
+        </div>
+      </section>
+
+      {/* 7. Remitente */}
+      <section>
+        <SectionTitle title="Firma y expedición" />
+        <div className={GRID}>
+          {text('nombreAsesor', 'Representante de BRIKA', 'Nombre del asesor', { required: true })}
+          {text('cargoAsesor', 'Cargo', 'Asesor Comercial')}
+          {text('ciudadExpedicion', 'Ciudad de expedición', 'Querétaro')}
+          {text('estadoExpedicion', 'Estado de expedición', 'Querétaro')}
         </div>
       </section>
 
       <div className="flex items-center justify-between gap-3 pt-2 border-t border-border-primary">
         <p className="text-xs text-text-tertiary">
-          {canGenerate ? 'Lista para generar.' : 'Selecciona una propiedad y captura asesor y cliente.'}
+          {canGenerate ? 'Lista para generar.' : 'Selecciona una propiedad y captura el cliente y el representante de BRIKA.'}
         </p>
         <button onClick={onGenerate} disabled={!canGenerate || generating} className="brika-btn-primary">
           {generating ? (

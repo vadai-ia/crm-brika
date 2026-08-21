@@ -30,3 +30,6 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# fotos: descargas de Drive cacheadas por scripts/fotos/sync-fotos.cjs
+scripts/fotos/.cache/

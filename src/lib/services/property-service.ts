@@ -6,6 +6,14 @@ import {
 } from '@/lib/validations/inventario'
 import * as dal from '@/lib/dal/properties'
 import * as webhookService from '@/lib/services/webhook-service'
+import { detectPending } from '@/lib/services/photo-sync/sync'
+
+// Fotos: tras guardar, registra la carpeta de Drive del link (si es nueva) y
+// mapea la propiedad (solo BD, en segundo plano). La importación de las fotos
+// la dispara el cliente al volver a Propiedades (usePhotoSync) o el cron.
+function schedulePhotoSync() {
+  detectPending().catch((e) => console.error('photo-sync detect:', e))
+}
 
 // Traduce el error del constraint unique de inventario_industrial
 // (parque, unidad, operacion) a un mensaje entendible para el usuario.
@@ -24,6 +32,7 @@ export async function createProperty(data: CreateInventarioInput) {
   try {
     const property = await dal.insertProperty(validated)
     webhookService.triggerEvent('property.created', property).catch(console.error)
+    schedulePhotoSync()
     return property
   } catch (err) {
     throw friendlyDbError(err)
@@ -35,6 +44,7 @@ export async function updateProperty(id: string, data: UpdateInventarioInput) {
   try {
     const property = await dal.updateProperty(id, validated)
     webhookService.triggerEvent('property.updated', property).catch(console.error)
+    schedulePhotoSync()
     return property
   } catch (err) {
     throw friendlyDbError(err)

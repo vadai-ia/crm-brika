@@ -1,176 +1,217 @@
 import { jsPDF } from 'jspdf'
 import { LOGO_WORDMARK_RATIO, LOGO_WORDMARK_SRC, loadImageAsBase64 } from '@/components/pdf/ficha/assets'
-import { buildCartaContent, type CartaPropuestaData, type TextSeg } from './cartaContent'
+import { spacedTextRight } from '@/components/pdf/ficha/draw'
+import { DIVIDER, GRAY, GRAY_LIGHT, INK, PAGE_H, PAGE_W, PURPLE } from '@/components/pdf/ficha/theme'
+import { buildCartaContent, type CartaContent, type CartaPropuestaData } from './cartaContent'
 
 export type { CartaPropuestaData } from './cartaContent'
 
-const INK = '#1A1A1A'
-const BODY = '#374151'
+// Réplica de public/pdf/BRIKA_Plantilla_Carta_Propuesta_Ejemplo.pdf (carta, 2 págs.)
+const MARGIN = 22
+const CONTENT_W = PAGE_W - MARGIN * 2
+const LABEL_COL_W = 66
+const BOTTOM_LIMIT = PAGE_H - 28
+const FOOTER_Y = PAGE_H - 30
+const LINE_FACTOR = 1.6
+const PT_TO_MM = 25.4 / 72
 
-interface Ctx {
-  doc: jsPDF
-  margin: number
-  contentW: number
-}
+type Style = 'normal' | 'bold' | 'italic'
 
-function setBody(doc: jsPDF, size = 11) {
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(size)
-  doc.setTextColor(BODY)
-}
+class Writer {
+  y = 0
+  constructor(readonly doc: jsPDF) {}
 
-/** Párrafo normal con salto de línea automático. Devuelve la nueva y. */
-function writeParagraph(ctx: Ctx, text: string, y: number, lineHeight = 5.2): number {
-  const lines = ctx.doc.splitTextToSize(text, ctx.contentW) as string[]
-  let cy = y
-  for (const line of lines) {
-    ctx.doc.text(line, ctx.margin, cy)
-    cy += lineHeight
-  }
-  return cy
-}
-
-/** Viñeta con sangría y salto de línea. Devuelve la nueva y. */
-function writeBullet(ctx: Ctx, text: string, y: number, lineHeight = 5.2): number {
-  const indent = 5
-  const lines = ctx.doc.splitTextToSize(text, ctx.contentW - indent) as string[]
-  ctx.doc.text('•', ctx.margin, y)
-  lines.forEach((line, i) => ctx.doc.text(line, ctx.margin + indent, y + i * lineHeight))
-  return y + lines.length * lineHeight + 2.5
-}
-
-/** Texto con segmentos en negrita, envuelto palabra por palabra. Devuelve la nueva y. */
-function writeRich(ctx: Ctx, segments: TextSeg[], y: number, lineHeight = 4.8): number {
-  const { doc, margin, contentW } = ctx
-  type Tok = { text: string; bold: boolean }
-  const tokens: Tok[] = []
-  for (const s of segments) {
-    for (const w of s.text.split(/(\s+)/).filter((t) => t.length > 0)) tokens.push({ text: w, bold: s.bold })
+  font(size: number, style: Style = 'normal', color: string = INK) {
+    this.doc.setFont('helvetica', style)
+    this.doc.setFontSize(size)
+    this.doc.setTextColor(color)
   }
 
-  const width = (toks: Tok[]): number =>
-    toks.reduce((acc, t) => {
-      doc.setFont('helvetica', t.bold ? 'bold' : 'normal')
-      return acc + doc.getTextWidth(t.text)
-    }, 0)
-
-  let line: Tok[] = []
-  let cy = y
-  const flush = () => {
-    while (line.length && /^\s+$/.test(line[line.length - 1].text)) line.pop()
-    let cx = margin
-    for (const t of line) {
-      doc.setFont('helvetica', t.bold ? 'bold' : 'normal')
-      doc.text(t.text, cx, cy)
-      cx += doc.getTextWidth(t.text)
-    }
-    cy += lineHeight
-    line = []
+  lineH(size: number): number {
+    return size * LINE_FACTOR * PT_TO_MM
   }
 
-  for (const tok of tokens) {
-    if (width([...line, tok]) > contentW && line.length > 0) {
-      flush()
-      if (!/^\s+$/.test(tok.text)) line.push(tok)
-    } else {
-      line.push(tok)
+  /** Salta de página si no caben `needed` mm. */
+  ensure(needed: number) {
+    if (this.y + needed > BOTTOM_LIMIT) {
+      this.doc.addPage()
+      this.y = 24
     }
   }
-  if (line.length) flush()
-  doc.setFont('helvetica', 'normal')
-  return cy
+
+  /** Párrafo justificado. Devuelve la altura usada. */
+  paragraph(text: string, size: number, style: Style = 'normal', color: string = INK, width = CONTENT_W, x = MARGIN): number {
+    this.font(size, style, color)
+    const lines = this.doc.splitTextToSize(text, width) as string[]
+    const h = lines.length * this.lineH(size)
+    this.ensure(h)
+    this.doc.text(text, x, this.y + size * PT_TO_MM * 0.85, { maxWidth: width, align: 'justify' })
+    this.y += h
+    return h
+  }
+
+  line(text: string, size: number, style: Style = 'normal', color: string = INK, x = MARGIN) {
+    this.ensure(this.lineH(size))
+    this.font(size, style, color)
+    this.doc.text(text, x, this.y + size * PT_TO_MM * 0.85)
+    this.y += this.lineH(size)
+  }
+
+  rule(color: string, width: number, fromX = MARGIN, toX = PAGE_W - MARGIN) {
+    this.doc.setDrawColor(color)
+    this.doc.setLineWidth(width)
+    this.doc.line(fromX, this.y, toX, this.y)
+  }
 }
 
-/**
- * Genera la Carta Propuesta (PDF carta, 1 página). Los campos vacíos o en 0
- * no aparecen: la redacción viene de `buildCartaContent`.
- */
+function header(w: Writer, c: CartaContent, logo: string | null) {
+  const { doc } = w
+  const logoH = 8.5
+  if (logo) {
+    // 'FAST' = deflate del PNG; sin esto jsPDF incrusta los píxeles crudos (~4 MB por carta)
+    doc.addImage(logo, 'PNG', MARGIN, 23, logoH * LOGO_WORDMARK_RATIO, logoH, undefined, 'FAST')
+  } else {
+    w.font(18, 'bold')
+    doc.text('BRIKA', MARGIN, 31)
+  }
+  w.font(6.8, 'normal', GRAY)
+  spacedTextRight(doc, c.tagline[0], PAGE_W - MARGIN, 27.5, 0.6)
+  spacedTextRight(doc, c.tagline[1], PAGE_W - MARGIN, 31, 0.6)
+  w.y = 36
+  w.rule(PURPLE, 0.5)
+  w.y = 44
+  w.font(9.6, 'normal', GRAY)
+  doc.text(c.fechaLine, PAGE_W - MARGIN, w.y + 2.5, { align: 'right' })
+  w.y = 57
+}
+
+function asunto(w: Writer, c: CartaContent) {
+  const { doc } = w
+  w.font(10, 'bold', PURPLE)
+  const labelW = doc.getTextWidth(`${c.asuntoLabel} `)
+  w.font(10, 'bold', INK)
+  const lines = doc.splitTextToSize(c.asunto, CONTENT_W - labelW) as string[]
+  const lh = w.lineH(10)
+  w.ensure(lines.length * lh)
+  const baseline = w.y + 10 * PT_TO_MM * 0.85
+  w.font(10, 'bold', PURPLE)
+  doc.text(c.asuntoLabel, MARGIN, baseline)
+  w.font(10, 'bold', INK)
+  lines.forEach((l, i) => doc.text(l, MARGIN + labelW, baseline + i * lh))
+  w.y += lines.length * lh
+}
+
+function terminos(w: Writer, c: CartaContent) {
+  const { doc } = w
+  w.ensure(30)
+  w.font(9.8, 'bold', INK)
+  doc.text(c.terminosTitulo, MARGIN, w.y + 3, { charSpace: 0.8 })
+  w.y += 6.5
+  w.rule(PURPLE, 0.5)
+  w.y += 1
+
+  const valueX = MARGIN + LABEL_COL_W
+  const valueW = CONTENT_W - LABEL_COL_W - 1
+  const lh = w.lineH(10)
+  for (const row of c.rows) {
+    w.font(10, 'normal', INK)
+    const lines = doc.splitTextToSize(row.value, valueW) as string[]
+    const rowH = Math.max(1, lines.length) * lh + 4.5
+    w.ensure(rowH)
+    const baseline = w.y + 3.2 + 10 * PT_TO_MM * 0.85
+    w.font(10, 'bold', INK)
+    doc.text(row.label, MARGIN + 1, baseline)
+    w.font(10, 'normal', INK)
+    lines.forEach((l, i) => doc.text(l, valueX, baseline + i * lh))
+    w.y += rowH
+    w.rule(DIVIDER, 0.3)
+  }
+  w.y += 7
+}
+
+function firma(w: Writer, c: CartaContent) {
+  w.ensure(58)
+  w.line(c.despedida, 10)
+  w.y += 16
+  if (c.firma.nombre) w.line(c.firma.nombre, 10, 'bold')
+  if (c.firma.cargo) w.line(c.firma.cargo, 9.6, 'normal', GRAY)
+  w.line(c.firma.empresa, 10)
+  w.line(c.firma.contacto, 9.6, 'normal', GRAY)
+}
+
+function aceptacion(w: Writer, c: CartaContent) {
+  const { doc } = w
+  w.y += 10
+  w.ensure(44)
+  w.rule(DIVIDER, 0.3)
+  w.y += 8
+  w.font(8.7, 'bold', GRAY)
+  doc.text(c.aceptacionTitulo, MARGIN, w.y, { charSpace: 0.8 })
+  w.y += 22
+  const leftEnd = MARGIN + 80
+  const rightStart = MARGIN + 93
+  doc.setDrawColor(INK)
+  doc.setLineWidth(0.3)
+  doc.line(MARGIN, w.y, leftEnd, w.y)
+  doc.line(rightStart, w.y, PAGE_W - MARGIN, w.y)
+  w.y += 4.5
+  w.font(8.6, 'normal', GRAY)
+  doc.text(c.aceptacionLabels[0], MARGIN, w.y)
+  doc.text(c.aceptacionLabels[1], rightStart, w.y)
+}
+
+function footer(w: Writer, c: CartaContent) {
+  const { doc } = w
+  if (w.y > FOOTER_Y - 6) {
+    doc.addPage()
+  }
+  w.y = FOOTER_Y
+  w.rule(DIVIDER, 0.3)
+  w.font(7.6, 'normal', GRAY_LIGHT)
+  doc.text(c.footer[0], PAGE_W / 2, FOOTER_Y + 6, { align: 'center' })
+  doc.text(c.footer[1], PAGE_W / 2, FOOTER_Y + 11, { align: 'center' })
+}
+
+/** Genera la Carta Propuesta (PDF carta) con la plantilla BRIKA. Lo vacío o en 0 no aparece. */
 export async function generateCartaPdf(data: CartaPropuestaData): Promise<Blob> {
   const c = buildCartaContent(data)
   const doc = new jsPDF('portrait', 'mm', 'letter')
-  const pw = doc.internal.pageSize.getWidth()
-  const margin = 18
-  const ctx: Ctx = { doc, margin, contentW: pw - margin * 2 }
+  doc.setLineHeightFactor(LINE_FACTOR)
+  const w = new Writer(doc)
 
-  // ---------- Encabezado: logo + fecha ----------
-  const logoB64 = await loadImageAsBase64(LOGO_WORDMARK_SRC)
-  let y = margin
-  if (logoB64) {
-    const logoH = 10
-    // 'FAST' = deflate del PNG; sin esto jsPDF incrusta los píxeles crudos (~4 MB por carta)
-    doc.addImage(logoB64, 'PNG', margin, y, logoH * LOGO_WORDMARK_RATIO, logoH, undefined, 'FAST')
-  } else {
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(18)
-    doc.setTextColor(INK)
-    doc.text('BRIKA', margin, y + 10)
+  header(w, c, await loadImageAsBase64(LOGO_WORDMARK_SRC))
+
+  // Destinatario
+  if (c.destinatario.nombre) w.line(c.destinatario.nombre, 10, 'bold')
+  if (c.destinatario.cargo) w.line(c.destinatario.cargo, 10)
+  if (c.destinatario.empresa) w.line(c.destinatario.empresa, 10)
+  w.line(c.presente, 10, 'normal', GRAY)
+  w.y += 7
+
+  asunto(w, c)
+  w.y += 7
+  w.line(c.saludo, 10)
+  w.y += 4
+
+  for (const p of c.parrafos) {
+    w.paragraph(p, 10)
+    w.y += 4
   }
-  setBody(doc, 10)
-  doc.text(c.fecha, pw - margin, y + 9, { align: 'right' })
-  y += 22
+  w.y += 3
 
-  // ---------- Título ----------
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(16)
-  doc.setTextColor(INK)
-  doc.text(c.titulo, pw / 2, y, { align: 'center' })
-  y += 10
+  terminos(w, c)
 
-  // ---------- Cuerpo ----------
-  setBody(doc)
-  doc.text(c.saludo, margin, y)
-  y += 7
-
-  doc.setFont('helvetica', 'bold')
-  doc.text(c.asesorLabel, margin, y)
-  const lblW = doc.getTextWidth(c.asesorLabel)
-  doc.setFont('helvetica', 'normal')
-  doc.text(c.asesorNombre, margin + lblW, y)
-  y += 10
-
-  y = writeParagraph(ctx, c.intro, y) + 3
-  y = writeParagraph(ctx, c.ofrecen, y) + 3
-
-  if (c.valorLine) {
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(INK)
-    doc.text(c.valorLine, margin, y)
-    setBody(doc)
-    y += 8
+  w.paragraph(c.disclaimer, 8.8, 'italic', GRAY)
+  w.y += 7
+  for (const p of c.cierre) {
+    w.paragraph(p, 10)
+    w.y += 4
   }
+  w.y += 2
 
-  for (const b of c.bullets) y = writeBullet(ctx, b, y)
-  y += 6
-
-  // ---------- Documentos ----------
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(12)
-  doc.setTextColor(INK)
-  doc.text(c.documentosTitulo, margin, y)
-  y += 6
-  setBody(doc, 10)
-  y = writeRich(ctx, c.documentos, y)
-
-  // ---------- Firmas ----------
-  y += 20
-  const lineLen = 70
-  const leftX = margin + 5
-  const rightX = pw - margin - 5 - lineLen
-  doc.setDrawColor(BODY)
-  doc.line(leftX, y, leftX + lineLen, y)
-  doc.line(rightX, y, rightX + lineLen, y)
-  y += 4
-
-  setBody(doc, 9)
-  doc.text(c.firmaComprador.label, leftX + lineLen / 2, y, { align: 'center' })
-  doc.text(c.firmaPropietario.label, rightX + lineLen / 2, y, { align: 'center' })
-  y += 6
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(10)
-  doc.setTextColor(INK)
-  if (c.firmaComprador.nombre) doc.text(c.firmaComprador.nombre, leftX + lineLen / 2, y, { align: 'center' })
-  if (c.firmaPropietario.nombre) doc.text(c.firmaPropietario.nombre, rightX + lineLen / 2, y, { align: 'center' })
+  firma(w, c)
+  aceptacion(w, c)
+  footer(w, c)
 
   return doc.output('blob')
 }

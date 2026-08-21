@@ -59,6 +59,57 @@ export async function cropToCover(b64: string, ratio: number): Promise<string | 
   return canvas.toDataURL('image/jpeg', 0.9)
 }
 
+// Foto COMPLETA dentro del marco (object-fit: contain), sin recorte ni
+// deformación. Las franjas sobrantes se rellenan con la misma foto
+// desenfocada y oscurecida (para que el título en blanco siga legible).
+// El desenfoque se hace dibujando la foto a ~32 px y reescalándola con
+// suavizado: funciona en todos los navegadores (ctx.filter no en Safari viejo).
+export async function fitToBox(b64: string, ratio: number): Promise<string | null> {
+  const img = await loadImg(b64)
+  if (!img) return null
+  const iw = img.naturalWidth
+  const ih = img.naturalHeight
+  const outW = 1600
+  const outH = Math.round(outW / ratio)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = outW
+  canvas.height = outH
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+
+  // Fondo: versión "cover" de la foto, muy reducida y reescalada (desenfoque barato)
+  const tiny = document.createElement('canvas')
+  const tinyW = 32
+  tiny.width = tinyW
+  tiny.height = Math.max(1, Math.round(tinyW / ratio))
+  const tctx = tiny.getContext('2d')
+  if (tctx) {
+    let sw = iw
+    let sh = iw / ratio
+    if (sh > ih) {
+      sh = ih
+      sw = ih * ratio
+    }
+    tctx.drawImage(img, (iw - sw) / 2, (ih - sh) / 2, sw, sh, 0, 0, tiny.width, tiny.height)
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(tiny, 0, 0, outW, outH)
+  } else {
+    ctx.fillStyle = '#121212'
+    ctx.fillRect(0, 0, outW, outH)
+  }
+  ctx.fillStyle = 'rgba(18, 18, 18, 0.45)'
+  ctx.fillRect(0, 0, outW, outH)
+
+  // Foto completa, centrada
+  const scale = Math.min(outW / iw, outH / ih)
+  const dw = Math.round(iw * scale)
+  const dh = Math.round(ih * scale)
+  ctx.drawImage(img, Math.round((outW - dw) / 2), Math.round((outH - dh) / 2), dw, dh)
+  return canvas.toDataURL('image/jpeg', 0.9)
+}
+
 export function dataUrlToBytes(dataUrl: string): Uint8Array {
   const b64 = dataUrl.split(',')[1] ?? ''
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))

@@ -3,6 +3,7 @@
 import ExcelJS from 'exceljs'
 import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Loader2, RefreshCw, XCircle } from 'lucide-react'
 import { INVENTARIO_COLUMNS, type RowData } from './columns'
+import { downloadBlob } from '@/lib/utils/download'
 
 interface ReviewStepProps {
   rows: RowData[]
@@ -30,12 +31,7 @@ async function generateErrorReport(rows: RowData[]) {
   }
   const buf = await wb.xlsx.writeBuffer()
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'Reporte_Errores.xlsx'
-  a.click()
-  URL.revokeObjectURL(url)
+  downloadBlob(blob, 'Reporte_Errores.xlsx')
 }
 
 export function ReviewStep({ rows, inserting, onBack, onConfirm }: ReviewStepProps) {

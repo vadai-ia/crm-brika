@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import { PdfBuilder } from '@/components/pdf/PdfBuilder'
 
+// PdfBuilder lee ?id= con useSearchParams → requiere un límite de Suspense
 export default function PdfPage() {
   return (
     <div className="space-y-4 max-w-3xl">
@@ -9,7 +11,9 @@ export default function PdfPage() {
           Selecciona propiedades para generar fichas técnicas con la plantilla BRIKA, listas para enviar a clientes
         </p>
       </div>
-      <PdfBuilder />
+      <Suspense fallback={null}>
+        <PdfBuilder />
+      </Suspense>
     </div>
   )
 }

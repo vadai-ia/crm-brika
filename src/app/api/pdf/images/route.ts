@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { getInventarioImagesByIds } from '@/lib/dal/properties'
+import { getInventarioImagesByIds } from '@/lib/dal/property-images'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()

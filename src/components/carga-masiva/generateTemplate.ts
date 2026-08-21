@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs'
 import { INVENTARIO_COLUMNS } from './columns'
+import { downloadBlob } from '@/lib/utils/download'
 
 // Header tinta BRIKA (mismo tono que el wordmark)
 const INK = '121212'
@@ -36,10 +37,5 @@ export async function generateTemplate() {
 
   const buf = await wb.xlsx.writeBuffer()
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'Template_Inventario_BRIKA.xlsx'
-  a.click()
-  URL.revokeObjectURL(url)
+  downloadBlob(blob, 'Template_Inventario_BRIKA.xlsx')
 }

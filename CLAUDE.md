@@ -35,6 +35,7 @@ src/
 - DAL pattern: toda query a Supabase va en `lib/dal/`. Los services llaman al DAL, nunca queries directas en componentes.
 - Validación con Zod en API routes antes de procesar.
 - Inventario (brika): lectura Y escritura van a `inventario_industrial` vía `KEY_TO_COLUMN`/`mapInventarioRow` de `lib/utils/inventario.ts` (ver ERROR-JOURNAL #6 y #7). Los módulos legacy del fork (desarrollos, carga-masiva) aún referencian `base_kibah`/`pagina_web_kibah` — esos nombres de tabla/columna NO se renombran.
+- Fotos de propiedades: bucket público `Imagenes` (`<set>/<nombre>` en tamaño web, `_thumbs/<set>/<nombre>` miniatura, `_manifest/<set>.json`), tabla `image_sets` (una carpeta de Drive = un set) y `propiedad_image_sets`. Se importan solas desde Drive vía `lib/services/photo-sync/` (ver ERROR-JOURNAL #21–#23). NUNCA usar `/render/image/` (transformaciones de Supabase: se cobran por imagen) ni subir fotos a mano al bucket; herramienta manual en `scripts/fotos/`.
 - Precios formateados: `$X,XXX,XXX MXN` — usar `Intl.NumberFormat('es-MX')`.
 - Paginación cursor-based en todas las listas.
 - TypeScript strict mode. No usar `any`. Types en `types/`. Constants en `lib/utils/constants.ts`.

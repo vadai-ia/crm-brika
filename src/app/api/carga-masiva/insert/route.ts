@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
 import { INVENTARIO_TABLE } from '@/lib/utils/inventario'
 import { INVENTARIO_COLUMNS } from '@/components/carga-masiva/columns'
+import { detectPending } from '@/lib/services/photo-sync/sync'
 
 const ALLOWED = new Set(INVENTARIO_COLUMNS.map((c) => c.dbColumn))
 const NUMERIC = new Set(INVENTARIO_COLUMNS.filter((c) => c.type === 'number').map((c) => c.dbColumn))
@@ -112,6 +113,10 @@ export async function POST(request: NextRequest) {
         )
       }
     }
+
+    // Fotos: registra carpetas de Drive nuevas y mapea propiedades (solo BD); la
+    // importación la dispara el cliente al volver a Propiedades (usePhotoSync).
+    detectPending().catch((e) => console.error('photo-sync detect:', e))
 
     return NextResponse.json({ success: true, inserted: toInsert.length, updated })
   } catch (err) {

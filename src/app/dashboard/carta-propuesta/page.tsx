@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { FilePlus2 } from 'lucide-react'
-import type { CartaFormState, CartaProperty } from '@/types/carta-propuesta'
+import type { CartaFormState, CartaProperty, CartaPropertyDetail } from '@/types/carta-propuesta'
 import { createClient } from '@/lib/supabase/client'
 import { Toast, type ToastType } from '@/components/ui/Toast'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -10,18 +10,10 @@ import { CartaForm } from '@/components/carta-propuesta/CartaForm'
 import { CartaPreview } from '@/components/carta-propuesta/CartaPreview'
 import { generateCartaPdf } from '@/components/carta-propuesta/generateCartaPdf'
 import { generateCartaDocx } from '@/components/carta-propuesta/generateCartaDocx'
+import { downloadBlob } from '@/lib/utils/download'
 import {
   buildCartaData, canGenerateCarta, cartaFileName, hasAnyData, makeEmptyForm, prefillFromProperty,
 } from '@/components/carta-propuesta/cartaFormState'
-
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
 
 export default function CartaPropuestaPage() {
   const [asesorName, setAsesorName] = useState('')
@@ -57,7 +49,33 @@ export default function CartaPropuestaPage() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  const handleSelectProperty = (p: CartaProperty) => setForm((prev) => prefillFromProperty(prev, p))
+  // Prellena lo básico de inmediato y, al llegar la fila completa del inventario
+  // (superficie, precios por m², disponibilidad), vuelve a prellenar.
+  const handleSelectProperty = async (p: CartaProperty) => {
+    setForm((prev) => prefillFromProperty(prev, p, null))
+    try {
+      const res = await fetch(`/api/properties/${p.id}`)
+      if (!res.ok) return
+      const json = (await res.json()) as { data?: Record<string, unknown> }
+      const d = json.data
+      if (!d) return
+      const num = (v: unknown): number | null => (v === null || v === undefined || v === '' ? null : Number(v))
+      const detail: CartaPropertyDetail = {
+        m2_terreno: num(d.m2_terreno),
+        m2_construccion: num(d.m2_construccion),
+        m2_rentables: num(d.m2_rentables),
+        area_base_calculo: (d.area_base_calculo as string | null) ?? null,
+        precio_venta_m2: num(d.precio_venta_m2),
+        precio_renta_m2: num(d.precio_renta_m2),
+        precio_total_venta: num(d.precio_total_venta),
+        renta_mensual: num(d.renta_mensual),
+        fecha_entrega: (d.fecha_entrega as string | null) ?? null,
+      }
+      setForm((prev) => (prev.selectedProperty?.id === p.id ? prefillFromProperty(prev, p, detail) : prev))
+    } catch {
+      // se queda con el prellenado básico
+    }
+  }
 
   const canGenerate = canGenerateCarta(form)
 
@@ -117,7 +135,7 @@ export default function CartaPropuestaPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="brika-page-title">Carta Propuesta</h1>
-          <p className="brika-page-desc mt-1">Genera una propuesta de compra para tu cliente. Lo que dejes vacío no aparece en la carta.</p>
+          <p className="brika-page-desc mt-1">Genera una propuesta de compra o de renta para tu cliente. Lo que dejes vacío no aparece en la carta.</p>
         </div>
         <button onClick={handleNewCarta} className="brika-btn-secondary" style={{ padding: '8px 16px', fontSize: '13px' }}>
           <FilePlus2 className="w-4 h-4" strokeWidth={1.5} />

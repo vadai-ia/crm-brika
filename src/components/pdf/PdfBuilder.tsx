@@ -3,9 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Download, Loader2, AlertTriangle, FilePlus2 } from 'lucide-react'
 import { usePdfSelection } from '@/hooks/usePdfSelection'
+import { usePdfDeepLink } from '@/hooks/usePdfDeepLink'
+import type { Property } from '@/types'
 import { PdfPreview } from './PdfPreview'
 import { PdfPropertySelector } from './PdfPropertySelector'
 import { generateFichaPdf } from './ficha'
+import { downloadBlob } from '@/lib/utils/download'
 import { Toast, type ToastType } from '@/components/ui/Toast'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
@@ -42,12 +45,7 @@ export function PdfBuilder() {
     setGenerating(true)
     try {
       const { blob, filename } = await generateFichaPdf(selectedProperties, imageMap, coverMap)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      a.click()
-      URL.revokeObjectURL(url)
+      downloadBlob(blob, filename)
       setToast({ message: 'Ficha descargada', type: 'success' })
     } catch (err) {
       console.error('PDF generation error:', err)
@@ -83,6 +81,19 @@ export function PdfBuilder() {
       doReset()
     }
   }, [count, doReset])
+
+  // "Crear PDF" desde Propiedades (/dashboard/pdf?id=…): la ficha queda solo con esa(s) propiedad(es)
+  const applyDeepLink = useCallback((list: Property[]) => {
+    clearSelection()
+    list.forEach(addProperty)
+    setCoverMap({})
+    setToast({
+      message: list.length === 1 ? 'Propiedad cargada en la ficha' : `${list.length} propiedades cargadas en la ficha`,
+      type: 'success',
+    })
+  }, [clearSelection, addProperty])
+  const deepLinkError = useCallback((message: string) => setToast({ message, type: 'error' }), [])
+  usePdfDeepLink(applyDeepLink, deepLinkError)
 
   return (
     <div className="space-y-6">

@@ -2,7 +2,8 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Building2, AlertCircle, Plus, FileText } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Building2, AlertCircle, Plus, FileText, Download, Loader2 } from 'lucide-react'
 import type { Property, UserRole } from '@/types'
 import type { ToastType } from '@/components/ui/Toast'
 import { useProperties } from '@/hooks/useProperties'
@@ -10,6 +11,8 @@ import { useFilters } from '@/hooks/useFilters'
 import { useColumnVisibility } from '@/hooks/useColumnVisibility'
 import { usePermissions } from '@/hooks/usePermissions'
 import { usePdfSelection } from '@/hooks/usePdfSelection'
+import { startPhotoSync } from '@/hooks/usePhotoSync'
+import { downloadBlob } from '@/lib/utils/download'
 import { PropertyFilters } from '@/components/properties/PropertyFilters'
 import { SavedFiltersBar } from '@/components/properties/SavedFiltersBar'
 import { PropertyGrid } from '@/components/properties/PropertyGrid'
@@ -98,6 +101,38 @@ export function PropiedadesView({ role }: { role: UserRole }) {
     setToast({ message, type })
   }, [])
 
+  // "Exportar propiedades": descarga todo el inventario en Excel (solo admin)
+  const [exporting, setExporting] = useState(false)
+  const handleExport = useCallback(async () => {
+    setExporting(true)
+    try {
+      const res = await fetch('/api/properties/export', { cache: 'no-store' })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error ?? 'No se pudo exportar el inventario')
+      }
+      const blob = await res.blob()
+      const match = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')
+      downloadBlob(blob, match?.[1] ?? 'BRIKA-Inventario.xlsx')
+      const rows = res.headers.get('x-row-count')
+      showToast(rows ? `Inventario exportado: ${rows} propiedades` : 'Inventario exportado', 'success')
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'No se pudo exportar el inventario', 'error')
+    } finally {
+      setExporting(false)
+    }
+  }, [showToast])
+
+  // "Crear PDF": abre el módulo de fichas con solo esa propiedad (/dashboard/pdf?id=…)
+  const router = useRouter()
+  const canPdf = can('pdf.view')
+  const handleCreatePdf = useCallback(
+    (property: Property) => {
+      router.push(`/dashboard/pdf?id=${encodeURIComponent(String(property.id))}`)
+    },
+    [router]
+  )
+
   // CRUD handlers
   const handleCreate = useCallback(() => {
     setEditingProperty(null)
@@ -148,6 +183,18 @@ export function PropiedadesView({ role }: { role: UserRole }) {
           )}
         </div>
         <div className="flex items-center gap-3">
+          {isAdmin && (
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              title="Descarga todo el inventario en Excel"
+              className="flex items-center gap-2 h-9 px-4 text-sm font-medium rounded-[var(--radius-sm)]
+                bg-bg-tertiary text-text-primary hover:bg-border-primary disabled:opacity-60 transition-colors cursor-pointer"
+            >
+              {exporting ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5} /> : <Download className="w-4 h-4" strokeWidth={1.5} />}
+              {exporting ? 'Exportando…' : 'Exportar propiedades'}
+            </button>
+          )}
           {canCreate && (
             <button
               onClick={handleCreate}
@@ -208,6 +255,8 @@ export function PropiedadesView({ role }: { role: UserRole }) {
               visibleColumnNames={visibleColumnNames}
               pdfSelectedIds={pdfSelectedIds}
               onTogglePdf={togglePdf}
+              onCreatePdf={canPdf ? handleCreatePdf : undefined}
+              canEditImages={canEdit}
             />
           ) : (
             <PropertyTable
@@ -275,6 +324,7 @@ export function PropiedadesView({ role }: { role: UserRole }) {
           onClose={() => setSelectedProperty(null)}
           onEdit={(p) => { setSelectedProperty(null); handleEdit(p) }}
           onDelete={(p) => { setSelectedProperty(null); handleDeleteRequest(p) }}
+          onCreatePdf={canPdf ? handleCreatePdf : undefined}
           visibleColumnNames={visibleColumnNames}
         />
       )}
@@ -284,7 +334,7 @@ export function PropiedadesView({ role }: { role: UserRole }) {
         <PropertyForm
           property={editingProperty}
           onClose={() => setFormOpen(false)}
-          onSuccess={refetch}
+          onSuccess={() => { refetch(); startPhotoSync() }}
           onToast={showToast}
         />
       )}
