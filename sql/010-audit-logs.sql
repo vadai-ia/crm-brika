@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   actor_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   actor_name TEXT,
   actor_email TEXT,
-  action TEXT NOT NULL,        -- create | update | delete | carga_masiva | reset_password | test
+  action TEXT NOT NULL,        -- create | update | delete | carga_masiva | reset_password | test | actualizar_fotos
   entity TEXT NOT NULL,        -- propiedad | usuario | rol | webhook | api_key | nota | desarrollo | columnas
   entity_id TEXT,              -- id del registro afectado (uuid o numérico, como texto)
   entity_label TEXT,           -- etiqueta legible: "Acupark · 14 · Venta", "Juan Pérez (correo)"

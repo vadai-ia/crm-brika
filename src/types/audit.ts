@@ -7,6 +7,7 @@ export const AUDIT_ACTIONS = [
   'carga_masiva',
   'reset_password',
   'test',
+  'actualizar_fotos',
 ] as const
 export type AuditAction = (typeof AUDIT_ACTIONS)[number]
 

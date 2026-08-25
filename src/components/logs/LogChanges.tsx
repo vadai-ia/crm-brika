@@ -108,11 +108,37 @@ function BulkDetail({ metadata }: { metadata: Record<string, unknown> }) {
   )
 }
 
+/** Etiquetas conocidas de la metadata genérica (resultado del botón de fotos, pruebas, etc.). */
+const META_LABELS: Record<string, string> = {
+  resultado: 'Resultado',
+  mensaje: 'Mensaje',
+  tipo: 'Tipo',
+  error: 'Error',
+}
+
+function MetadataList({ metadata }: { metadata: Record<string, unknown> }) {
+  const entries = Object.entries(metadata)
+  if (entries.length === 0) return null
+  return (
+    <dl className="space-y-1">
+      {entries.map(([key, value]) => (
+        <div key={key} className="flex gap-2 text-sm">
+          <dt className="font-medium text-text-primary whitespace-nowrap">
+            {META_LABELS[key] ?? key}:
+          </dt>
+          <dd className="text-text-secondary break-words">{fmtVal(value)}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
 export function LogChanges({ log }: { log: AuditLog }) {
   const hasChanges = log.changes && Object.keys(log.changes).length > 0
   const isBulk = log.action === 'carga_masiva' && log.metadata
+  const hasMetadata = !isBulk && log.metadata && Object.keys(log.metadata).length > 0
 
-  if (!hasChanges && !isBulk) {
+  if (!hasChanges && !isBulk && !hasMetadata) {
     return <p className="text-sm text-text-tertiary">Sin detalle de cambios para este registro.</p>
   }
 
@@ -120,6 +146,7 @@ export function LogChanges({ log }: { log: AuditLog }) {
     <div className="space-y-4">
       {hasChanges && <ChangesTable changes={log.changes!} />}
       {isBulk && <BulkDetail metadata={log.metadata!} />}
+      {hasMetadata && <MetadataList metadata={log.metadata!} />}
     </div>
   )
 }

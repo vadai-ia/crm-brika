@@ -44,6 +44,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   carga_masiva: 'Carga masiva',
   reset_password: 'Reseteó contraseña',
   test: 'Probó',
+  actualizar_fotos: 'Actualizó fotos',
 }
 
 export const AUDIT_ACTION_COLORS: Record<string, { bg: string; text: string }> = {
@@ -53,6 +54,7 @@ export const AUDIT_ACTION_COLORS: Record<string, { bg: string; text: string }> =
   carga_masiva: { bg: 'bg-orange/15 dark:bg-orange/20', text: 'text-orange-700 dark:text-orange-400' },
   reset_password: { bg: 'bg-amber-500/15 dark:bg-amber-500/20', text: 'text-amber-700 dark:text-amber-400' },
   test: { bg: 'bg-slate-500/15 dark:bg-slate-500/20', text: 'text-slate-700 dark:text-slate-400' },
+  actualizar_fotos: { bg: 'bg-cyan-500/15 dark:bg-cyan-500/20', text: 'text-cyan-700 dark:text-cyan-400' },
 }
 
 export const AUDIT_ENTITY_LABELS: Record<string, string> = {
