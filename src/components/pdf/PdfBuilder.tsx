@@ -40,6 +40,11 @@ export function PdfBuilder() {
       .catch(() => {})
   }, [selectedProperties])
 
+  const doReset = useCallback(() => {
+    clearSelection()
+    setCoverMap({})
+  }, [clearSelection])
+
   const handleGenerate = useCallback(async () => {
     if (count === 0) return
     setGenerating(true)
@@ -47,13 +52,16 @@ export function PdfBuilder() {
       const { blob, filename } = await generateFichaPdf(selectedProperties, imageMap, coverMap)
       downloadBlob(blob, filename)
       setToast({ message: 'Ficha descargada', type: 'success' })
+      // La selección se limpia DESPUÉS de generar y descargar (pedido del
+      // usuario); si la generación falla, se conserva para reintentar.
+      doReset()
     } catch (err) {
       console.error('PDF generation error:', err)
       setToast({ message: 'Error al generar la ficha', type: 'error' })
     } finally {
       setGenerating(false)
     }
-  }, [count, selectedProperties, imageMap, coverMap])
+  }, [count, selectedProperties, imageMap, coverMap, doReset])
 
   const handlePickCover = useCallback((id: number, dataUrl: string) => {
     setCoverMap((prev) => ({ ...prev, [id]: dataUrl }))
@@ -68,11 +76,6 @@ export function PdfBuilder() {
       return next
     })
   }, [removeProperty])
-
-  const doReset = useCallback(() => {
-    clearSelection()
-    setCoverMap({})
-  }, [clearSelection])
 
   const handleNewPdf = useCallback(() => {
     if (count > 0) {
