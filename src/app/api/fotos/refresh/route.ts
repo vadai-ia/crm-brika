@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import { z, ZodError } from 'zod'
 import { requireAnyPermission, isAuthError } from '@/lib/auth/permissions'
@@ -24,7 +25,7 @@ const RESULT_LABELS: Record<ForceCheckStatus, string> = {
  * momento (ignora la ventana de 24 h) y deja el set pendiente si hay algo
  * nuevo; la importación la ejecuta el cliente (usePhotoSync) como siempre.
  */
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   const auth = await requireAnyPermission(['propiedades.view', 'pdf.view'])
   if (isAuthError(auth)) return auth
 
@@ -59,3 +60,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const POST = withTechLog('/api/fotos/refresh', _POST)

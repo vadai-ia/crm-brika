@@ -1,8 +1,9 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import * as dal from '@/lib/dal/event-categories'
 
-export async function GET() {
+async function _GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -15,7 +16,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -31,3 +32,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: status === 400 ? 'Ya existe una categoria con ese nombre' : msg }, { status })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/calendar/categories', _GET)
+export const POST = withTechLog('/api/calendar/categories', _POST)

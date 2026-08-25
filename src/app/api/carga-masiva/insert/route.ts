@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
@@ -23,7 +24,7 @@ function tripleKey(parque: unknown, unidad: unknown, operacion: unknown): string
 
 // Carga masiva: inserta filas nuevas y ACTUALIZA las que ya existen
 // (match por parque + unidad + operacion, el unique de la tabla).
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   const auth = await requirePermission('carga_masiva.view')
   if (isAuthError(auth)) return auth
 
@@ -174,3 +175,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Error' }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const POST = withTechLog('/api/carga-masiva/insert', _POST)

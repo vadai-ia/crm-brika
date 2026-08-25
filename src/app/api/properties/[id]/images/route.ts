@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import { z, ZodError } from 'zod'
 import { requireAnyPermission, requirePermission, isAuthError } from '@/lib/auth/permissions'
@@ -14,7 +15,7 @@ const patchSchema = z.union([
 ])
 
 /** Todas las fotos del set de una propiedad, en orden, con visibilidad en la web. */
-export async function GET(
+async function _GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -39,7 +40,7 @@ export async function GET(
  * Visibilidad u orden de las fotos de la propiedad para la página web
  * (propiedad_imagenes_visibilidad). Responde con el set actualizado.
  */
-export async function PATCH(
+async function _PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -92,3 +93,7 @@ export async function PATCH(
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/properties/[id]/images', _GET)
+export const PATCH = withTechLog('/api/properties/[id]/images', _PATCH)

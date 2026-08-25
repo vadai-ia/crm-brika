@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import * as dal from '@/lib/dal/anuncios'
@@ -5,7 +6,7 @@ import { updateNotaSchema } from '@/lib/validations/anuncio'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
 import { diffFields, logAudit, snapshotFields } from '@/lib/services/audit-service'
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+async function _PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requirePermission('anuncios.view')
   if (isAuthError(auth)) return auth
 
@@ -68,7 +69,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+async function _DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requirePermission('anuncios.view')
   if (isAuthError(auth)) return auth
 
@@ -92,3 +93,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: { id: 
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Error' }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const PATCH = withTechLog('/api/anuncios/[id]', _PATCH)
+export const DELETE = withTechLog('/api/anuncios/[id]', _DELETE)

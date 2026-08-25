@@ -61,3 +61,28 @@ export interface AuditLogsResponse {
   /** Solo viene en la primera página (sin cursor). */
   actors?: AuditActor[]
 }
+
+// ---- Logs técnicos (tabla public.technical_logs, sql/011) ----
+
+export interface TechLog {
+  id: string
+  method: string
+  /** Plantilla de la ruta: /api/properties/[id] */
+  route: string
+  /** Ruta real del request: /api/properties/8f3a… */
+  path: string | null
+  status: number
+  duration_ms: number | null
+  user_id: string | null
+  user_email: string | null
+  error: string | null
+  created_at: string
+}
+
+/** Filtro de status de la pestaña Técnicos. */
+export type TechStatusFilter = '' | 'errors' | '4xx' | '5xx' | 'slow'
+
+export interface TechLogsResponse {
+  data: TechLog[]
+  nextCursor: string | null
+}

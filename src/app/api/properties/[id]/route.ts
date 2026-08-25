@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { ZodError } from 'zod'
@@ -17,7 +18,7 @@ import { requireAnyPermission, isAuthError } from '@/lib/auth/permissions'
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** Propiedad completa (todas las columnas mapeadas). La usan el módulo PDF y el detalle. */
-export async function GET(
+async function _GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -55,7 +56,7 @@ async function verifyAdmin() {
   return { user }
 }
 
-export async function PUT(
+async function _PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -101,7 +102,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
+async function _DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -135,3 +136,8 @@ export async function DELETE(
     return NextResponse.json({ error: message }, { status })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/properties/[id]', _GET)
+export const PUT = withTechLog('/api/properties/[id]', _PUT)
+export const DELETE = withTechLog('/api/properties/[id]', _DELETE)

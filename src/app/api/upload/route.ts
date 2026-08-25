@@ -1,10 +1,11 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dvxrojzi1/image/upload'
 const UPLOAD_PRESET = 'kibah_unsigned'
 
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -40,3 +41,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const POST = withTechLog('/api/upload', _POST)

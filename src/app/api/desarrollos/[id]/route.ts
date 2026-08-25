@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import { updateDesarrolloSchema } from '@/lib/validations/desarrollo'
@@ -5,7 +6,7 @@ import * as dal from '@/lib/dal/desarrollos'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
 import { diffFields, logAudit } from '@/lib/services/audit-service'
 
-export async function PUT(
+async function _PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -46,7 +47,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
+async function _DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -73,3 +74,7 @@ export async function DELETE(
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const PUT = withTechLog('/api/desarrollos/[id]', _PUT)
+export const DELETE = withTechLog('/api/desarrollos/[id]', _DELETE)

@@ -1,9 +1,10 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCodeForTokens } from '@/lib/google/auth'
 import { saveTokens } from '@/lib/dal/google-tokens'
 import { google } from 'googleapis'
 
-export async function GET(request: NextRequest) {
+async function _GET(request: NextRequest) {
   const params = request.nextUrl.searchParams
   const code = params.get('code')
   const state = params.get('state') // userId
@@ -37,3 +38,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard/calendario?error=token_failed', request.url))
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/google/callback', _GET)

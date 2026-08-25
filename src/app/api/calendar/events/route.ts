@@ -1,9 +1,10 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { getEvents, createEvent } from '@/lib/google/calendar'
 import { upsertInvitedContacts } from '@/lib/dal/invited-contacts'
 
-export async function GET(request: NextRequest) {
+async function _GET(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -40,3 +41,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Error' }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/calendar/events', _GET)
+export const POST = withTechLog('/api/calendar/events', _POST)

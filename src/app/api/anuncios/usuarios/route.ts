@@ -1,9 +1,10 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
 
 // Todos los usuarios activos (incluidos admins) para el select de responsable.
-export async function GET() {
+async function _GET() {
   const auth = await requirePermission('anuncios.view')
   if (isAuthError(auth)) return auth
 
@@ -19,3 +20,6 @@ export async function GET() {
   }
   return NextResponse.json({ data: data ?? [] })
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/anuncios/usuarios', _GET)

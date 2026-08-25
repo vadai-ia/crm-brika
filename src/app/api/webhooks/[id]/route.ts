@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import { updateWebhookSchema } from '@/lib/validations/webhook'
@@ -6,7 +7,7 @@ import { requirePermission, isAuthError } from '@/lib/auth/permissions'
 import { diffFields, logAudit, snapshotFields } from '@/lib/services/audit-service'
 import type { AuditChange } from '@/types/audit'
 
-export async function PUT(
+async function _PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -59,7 +60,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
+async function _DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -87,3 +88,7 @@ export async function DELETE(
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const PUT = withTechLog('/api/webhooks/[id]', _PUT)
+export const DELETE = withTechLog('/api/webhooks/[id]', _DELETE)

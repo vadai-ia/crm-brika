@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import { createApiKeySchema } from '@/lib/validations/api-key'
@@ -6,7 +7,7 @@ import * as apiKeyService from '@/lib/services/api-key-service'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
 import { logAudit, snapshotFields } from '@/lib/services/audit-service'
 
-export async function GET() {
+async function _GET() {
   const auth = await requirePermission('apikeys.view')
   if (isAuthError(auth)) return auth
 
@@ -19,7 +20,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   const auth = await requirePermission('apikeys.manage')
   if (isAuthError(auth)) return auth
 
@@ -52,3 +53,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/api-keys', _GET)
+export const POST = withTechLog('/api/api-keys', _POST)

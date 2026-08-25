@@ -1,8 +1,9 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { getInventarioImagesByIds } from '@/lib/dal/property-images'
 
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
@@ -20,3 +21,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const POST = withTechLog('/api/pdf/images', _POST, { level: 'errors' })

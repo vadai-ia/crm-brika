@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import * as dal from '@/lib/dal/roles'
@@ -13,7 +14,7 @@ async function verifyAdmin() {
   return { user }
 }
 
-export async function PUT(
+async function _PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -56,7 +57,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
+async function _DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -79,3 +80,7 @@ export async function DELETE(
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Error' }, { status: 400 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const PUT = withTechLog('/api/roles/[id]', _PUT)
+export const DELETE = withTechLog('/api/roles/[id]', _DELETE)

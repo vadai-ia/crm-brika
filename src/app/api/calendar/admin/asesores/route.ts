@@ -1,8 +1,9 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextResponse } from 'next/server'
 import { getConnectedUsersWithProfiles } from '@/lib/dal/google-tokens'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
 
-export async function GET() {
+async function _GET() {
   const auth = await requirePermission('asesores.view')
   if (isAuthError(auth)) return auth
 
@@ -15,3 +16,6 @@ export async function GET() {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Error' }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/calendar/admin/asesores', _GET)

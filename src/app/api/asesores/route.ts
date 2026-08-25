@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import * as dal from '@/lib/dal/asesores'
 import { createAsesorSchema } from '@/lib/validations/asesor'
@@ -11,7 +12,7 @@ import { asesorErrorResponse } from './errors'
  * Devuelve TODOS los perfiles (incluidos admins) paginados por cursor,
  * más `meta` con el usuario actual para que la UI bloquee acciones sobre sí mismo.
  */
-export async function GET(request: NextRequest) {
+async function _GET(request: NextRequest) {
   const auth = await requirePermission('asesores.view')
   if (isAuthError(auth)) return auth
 
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   const auth = await requirePermission('asesores.create')
   if (isAuthError(auth)) return auth
 
@@ -64,3 +65,7 @@ export async function POST(request: NextRequest) {
     return asesorErrorResponse(err, 'Error creating asesor')
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/asesores', _GET)
+export const POST = withTechLog('/api/asesores', _POST)

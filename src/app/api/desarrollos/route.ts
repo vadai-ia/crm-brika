@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import { createDesarrolloSchema } from '@/lib/validations/desarrollo'
@@ -5,7 +6,7 @@ import * as dal from '@/lib/dal/desarrollos'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
 import { logAudit, snapshotFields } from '@/lib/services/audit-service'
 
-export async function GET(request: NextRequest) {
+async function _GET(request: NextRequest) {
   const auth = await requirePermission('desarrollos.view')
   if (isAuthError(auth)) return auth
 
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
   })
 }
 
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   const auth = await requirePermission('desarrollos.create')
   if (isAuthError(auth)) return auth
 
@@ -59,3 +60,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/desarrollos', _GET)
+export const POST = withTechLog('/api/desarrollos', _POST)

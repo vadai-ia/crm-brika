@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { z, ZodError } from 'zod'
@@ -5,7 +6,7 @@ import { getColumnVisibility, updateColumnVisibility } from '@/lib/dal/column-vi
 import { logAudit } from '@/lib/services/audit-service'
 import type { AuditChange } from '@/types/audit'
 
-export async function GET() {
+async function _GET() {
   const supabase = await createClient()
 
   const {
@@ -41,7 +42,7 @@ const columnUpdateSchema = z.object({
 
 const updatePayloadSchema = z.array(columnUpdateSchema).min(1)
 
-export async function PUT(request: NextRequest) {
+async function _PUT(request: NextRequest) {
   const { requirePermission, isAuthError } = await import('@/lib/auth/permissions')
   const auth = await requirePermission('columnas.edit')
   if (isAuthError(auth)) return auth
@@ -97,3 +98,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/column-visibility', _GET)
+export const PUT = withTechLog('/api/column-visibility', _PUT)

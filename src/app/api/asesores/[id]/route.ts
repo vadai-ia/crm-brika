@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import * as dal from '@/lib/dal/asesores'
 import { updateAsesorSchema } from '@/lib/validations/asesor'
@@ -8,7 +9,7 @@ import { asesorErrorResponse } from '../errors'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
-export async function PATCH(request: NextRequest, { params }: RouteContext) {
+async function _PATCH(request: NextRequest, { params }: RouteContext) {
   const auth = await requirePermission('asesores.edit')
   if (isAuthError(auth)) return auth
 
@@ -80,7 +81,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+async function _DELETE(_request: NextRequest, { params }: RouteContext) {
   const auth = await requirePermission('asesores.delete')
   if (isAuthError(auth)) return auth
 
@@ -118,3 +119,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
     return asesorErrorResponse(err, 'Error deleting asesor')
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const PATCH = withTechLog('/api/asesores/[id]', _PATCH)
+export const DELETE = withTechLog('/api/asesores/[id]', _DELETE)

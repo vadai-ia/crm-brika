@@ -1,9 +1,10 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import * as dal from '@/lib/dal/api-keys'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
 import { logAudit } from '@/lib/services/audit-service'
 
-export async function DELETE(
+async function _DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -29,3 +30,6 @@ export async function DELETE(
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const DELETE = withTechLog('/api/api-keys/[id]', _DELETE)

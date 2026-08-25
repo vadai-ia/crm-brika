@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextResponse } from 'next/server'
 import { requireAdmin, isAuthError } from '@/lib/auth/permissions'
 import { buildInventarioWorkbook, exportFileName } from '@/lib/services/inventario-export'
@@ -5,7 +6,7 @@ import { buildInventarioWorkbook, exportFileName } from '@/lib/services/inventar
 export const dynamic = 'force-dynamic'
 
 /** Descarga todo el inventario (inventario_industrial) en Excel. Solo admin. */
-export async function GET() {
+async function _GET() {
   const auth = await requireAdmin()
   if (isAuthError(auth)) return auth
 
@@ -26,3 +27,6 @@ export async function GET() {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/properties/export', _GET)

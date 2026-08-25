@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
 import { getAuditActors, getAuditLogsPage } from '@/lib/dal/audit'
@@ -9,7 +10,7 @@ import { AUDIT_PAGE_SIZE } from '@/lib/utils/constants'
  * Historial de auditoría paginado por cursor (created_at). La primera
  * página (sin cursor) incluye también los usuarios para el filtro.
  */
-export async function GET(request: NextRequest) {
+async function _GET(request: NextRequest) {
   const auth = await requirePermission('logs.view')
   if (isAuthError(auth)) return auth
 
@@ -45,3 +46,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/logs', _GET)

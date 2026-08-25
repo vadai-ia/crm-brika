@@ -1,9 +1,10 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { updateEvent, deleteEvent } from '@/lib/google/calendar'
 import { upsertInvitedContacts } from '@/lib/dal/invited-contacts'
 
-export async function PUT(
+async function _PUT(
   request: NextRequest,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
@@ -24,7 +25,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
+async function _DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
@@ -40,3 +41,7 @@ export async function DELETE(
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Error' }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const PUT = withTechLog('/api/calendar/events/[eventId]', _PUT)
+export const DELETE = withTechLog('/api/calendar/events/[eventId]', _DELETE)

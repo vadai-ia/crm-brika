@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import { getConnectedUsersWithProfiles } from '@/lib/dal/google-tokens'
 import { getEvents } from '@/lib/google/calendar'
@@ -9,7 +10,7 @@ const ASESOR_COLORS = [
 ]
 const ADMIN_COLOR = '#6B7280'
 
-export async function GET(request: NextRequest) {
+async function _GET(request: NextRequest) {
   const auth = await requirePermission('asesores.view')
   if (isAuthError(auth)) return auth
 
@@ -80,3 +81,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Error' }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/calendar/admin/events', _GET)

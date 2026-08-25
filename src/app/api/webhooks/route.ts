@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import { createWebhookSchema } from '@/lib/validations/webhook'
@@ -5,7 +6,7 @@ import * as dal from '@/lib/dal/webhooks'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
 import { logAudit, snapshotFields } from '@/lib/services/audit-service'
 
-export async function GET() {
+async function _GET() {
   const auth = await requirePermission('webhooks.view')
   if (isAuthError(auth)) return auth
 
@@ -18,7 +19,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   const auth = await requirePermission('webhooks.manage')
   if (isAuthError(auth)) return auth
 
@@ -51,3 +52,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/webhooks', _GET)
+export const POST = withTechLog('/api/webhooks', _POST)

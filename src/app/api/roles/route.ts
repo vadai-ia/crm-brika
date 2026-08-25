@@ -1,10 +1,11 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import * as dal from '@/lib/dal/roles'
 import { logAudit, snapshotFields } from '@/lib/services/audit-service'
 import { ALL_PERMISSIONS } from '@/types/roles'
 
-export async function GET() {
+async function _GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -17,7 +18,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -52,3 +53,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: msg }, { status: msg.includes('unique') || msg.includes('duplicate') ? 400 : 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/roles', _GET)
+export const POST = withTechLog('/api/roles', _POST)

@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
@@ -18,7 +19,7 @@ import {
   mapInventarioRow,
 } from '@/lib/utils/inventario'
 
-export async function GET(request: NextRequest) {
+async function _GET(request: NextRequest) {
   const supabase = await createClient()
 
   const {
@@ -130,7 +131,7 @@ export async function GET(request: NextRequest) {
   })
 }
 
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   const supabase = await createClient()
 
   const {
@@ -177,3 +178,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/properties', _GET)
+export const POST = withTechLog('/api/properties', _POST)

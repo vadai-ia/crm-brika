@@ -1,10 +1,11 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { INVENTARIO_TABLE } from '@/lib/utils/inventario'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
 
 // Catálogo ligero (id + etiqueta) para ligar una nota a una propiedad.
-export async function GET() {
+async function _GET() {
   const auth = await requirePermission('anuncios.view')
   if (isAuthError(auth)) return auth
 
@@ -24,3 +25,6 @@ export async function GET() {
   }))
   return NextResponse.json({ data: items })
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/anuncios/propiedades', _GET)

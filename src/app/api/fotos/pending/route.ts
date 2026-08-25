@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAnyPermission, isAuthError } from '@/lib/auth/permissions'
 import { detectPending, listPending } from '@/lib/services/photo-sync/sync'
@@ -8,7 +9,7 @@ export const dynamic = 'force-dynamic'
  * Sets de fotos pendientes de importar. Con `?detect=1` revisa antes el
  * inventario (carpetas de Drive nuevas, propiedades sin mapear) — solo BD.
  */
-export async function GET(request: NextRequest) {
+async function _GET(request: NextRequest) {
   const auth = await requireAnyPermission(['propiedades.view', 'pdf.view'])
   if (isAuthError(auth)) return auth
 
@@ -21,3 +22,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/fotos/pending', _GET, { level: 'errors' })

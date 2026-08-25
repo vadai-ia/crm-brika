@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { getProfileById, resetAsesorPassword } from '@/lib/dal/asesores'
@@ -6,7 +7,7 @@ import { ROLE_ADMIN } from '@/lib/utils/constants'
 import { logAudit } from '@/lib/services/audit-service'
 import { asesorErrorResponse } from '../../errors'
 
-export async function POST(
+async function _POST(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -39,3 +40,6 @@ export async function POST(
     return asesorErrorResponse(err, 'Error resetting password')
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const POST = withTechLog('/api/asesores/[id]/reset-password', _POST)

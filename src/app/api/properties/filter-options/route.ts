@@ -1,3 +1,4 @@
+import { withTechLog } from '@/lib/services/tech-log'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { getFilterOptions } from '@/lib/dal/filter-options'
@@ -7,7 +8,7 @@ import { getFilterOptions } from '@/lib/dal/filter-options'
  * TODAS las variantes de mayúsculas/acentos que existen en la BD (ver
  * lib/dal/filter-options.ts); al filtrar con ella se traen todas.
  */
-export async function GET() {
+async function _GET() {
   const supabase = await createClient()
   const {
     data: { user },
@@ -30,3 +31,6 @@ export async function GET() {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+// Logs técnicos (ERROR-JOURNAL #34): registra status, duración y errores del request
+export const GET = withTechLog('/api/properties/filter-options', _GET)
