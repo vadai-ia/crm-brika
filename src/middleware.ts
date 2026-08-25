@@ -53,6 +53,7 @@ export async function middleware(request: NextRequest) {
             ['/dashboard/admin/propiedades', 'propiedades.view'],
             ['/dashboard/admin/calendario', 'asesores.view'],
             ['/dashboard/admin/carga-masiva', 'carga_masiva.view'],
+            ['/dashboard/admin/logs', 'logs.view'],
           ]
           const match = ADMIN_PATH_PERMISSIONS.find(([p]) => pathname.startsWith(p))
           if (!match || !profile?.role) {

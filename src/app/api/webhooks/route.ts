@@ -3,6 +3,7 @@ import { ZodError } from 'zod'
 import { createWebhookSchema } from '@/lib/validations/webhook'
 import * as dal from '@/lib/dal/webhooks'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
+import { logAudit, snapshotFields } from '@/lib/services/audit-service'
 
 export async function GET() {
   const auth = await requirePermission('webhooks.view')
@@ -25,6 +26,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validated = createWebhookSchema.parse(body)
     const webhook = await dal.createWebhook(validated, auth.userId)
+    await logAudit({
+      actorId: auth.userId,
+      action: 'create',
+      entity: 'webhook',
+      entityId: webhook.id,
+      entityLabel: webhook.name,
+      changes: snapshotFields({
+        Nombre: webhook.name,
+        URL: webhook.url,
+        Eventos: webhook.events,
+        Activo: webhook.is_active,
+      }),
+    })
     return NextResponse.json({ data: webhook }, { status: 201 })
   } catch (err) {
     if (err instanceof ZodError) {

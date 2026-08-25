@@ -103,6 +103,27 @@ export async function getPropertyById(
   return mapInventarioRow(data) as unknown as Property
 }
 
+/**
+ * Fila cruda del inventario (columnas reales, sin remapear) para calcular
+ * los diffs del historial de auditoría. null si no existe o hay error.
+ */
+export async function getInventarioRawById(
+  id: string
+): Promise<Record<string, unknown> | null> {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from(INVENTARIO_TABLE)
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Error fetching raw inventario row:', error.message)
+    return null
+  }
+  return data as Record<string, unknown> | null
+}
+
 // Las opciones de filtro (valores normalizados) viven en lib/dal/filter-options.ts
 
 const LIST_COLUMNS =

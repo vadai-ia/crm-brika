@@ -33,3 +33,35 @@ export const THEME_LABELS: Record<ThemePreference, string> = {
 export function roleBadgeClass(role: string): string {
   return role === ROLE_ADMIN ? 'brika-badge-preventa' : 'brika-badge-entrega'
 }
+
+// ── Logs (historial de auditoría) ────────────────────────────────────────────
+export const AUDIT_PAGE_SIZE = 20
+
+export const AUDIT_ACTION_LABELS: Record<string, string> = {
+  create: 'Creó',
+  update: 'Editó',
+  delete: 'Eliminó',
+  carga_masiva: 'Carga masiva',
+  reset_password: 'Reseteó contraseña',
+  test: 'Probó',
+}
+
+export const AUDIT_ACTION_COLORS: Record<string, { bg: string; text: string }> = {
+  create: { bg: 'bg-emerald-500/15 dark:bg-emerald-500/20', text: 'text-emerald-700 dark:text-emerald-400' },
+  update: { bg: 'bg-blue-500/15 dark:bg-blue-500/20', text: 'text-blue-700 dark:text-blue-400' },
+  delete: { bg: 'bg-red-500/15 dark:bg-red-500/20', text: 'text-red-700 dark:text-red-400' },
+  carga_masiva: { bg: 'bg-orange/15 dark:bg-orange/20', text: 'text-orange-700 dark:text-orange-400' },
+  reset_password: { bg: 'bg-amber-500/15 dark:bg-amber-500/20', text: 'text-amber-700 dark:text-amber-400' },
+  test: { bg: 'bg-slate-500/15 dark:bg-slate-500/20', text: 'text-slate-700 dark:text-slate-400' },
+}
+
+export const AUDIT_ENTITY_LABELS: Record<string, string> = {
+  propiedad: 'Propiedad',
+  usuario: 'Usuario',
+  rol: 'Rol',
+  webhook: 'Webhook',
+  api_key: 'API Key',
+  nota: 'Nota',
+  desarrollo: 'Desarrollo',
+  columnas: 'Columnas',
+}

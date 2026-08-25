@@ -4,6 +4,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import { createInventarioSchema } from '@/lib/validations/inventario'
 import * as propertyService from '@/lib/services/property-service'
+import {
+  INVENTARIO_FIELD_LABELS,
+  inventarioLabel,
+  logAudit,
+  snapshotFields,
+} from '@/lib/services/audit-service'
 import { resolveColumnVariants } from '@/lib/dal/filter-options'
 import {
   INVENTARIO_TABLE,
@@ -150,6 +156,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validated = createInventarioSchema.parse(body)
     const property = await propertyService.createProperty(validated)
+    await logAudit({
+      actorId: user.id,
+      action: 'create',
+      entity: 'propiedad',
+      entityId: String(property.id),
+      entityLabel: inventarioLabel(validated),
+      changes: snapshotFields(validated, INVENTARIO_FIELD_LABELS),
+    })
     return NextResponse.json({ data: property }, { status: 201 })
   } catch (err) {
     if (err instanceof ZodError) {

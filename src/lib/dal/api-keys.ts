@@ -51,6 +51,23 @@ export async function createApiKey(
   return apiKey as ApiKey
 }
 
+export async function getApiKeyById(
+  id: string
+): Promise<Omit<ApiKey, 'key_hash' | 'key_salt'> | null> {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from('api_keys')
+    .select('id, name, key_prefix, permissions, is_active, last_used_at, expires_at, created_at, created_by')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Error fetching api key:', error.message)
+    return null
+  }
+  return (data as Omit<ApiKey, 'key_hash' | 'key_salt'>) ?? null
+}
+
 export async function revokeApiKey(id: string): Promise<void> {
   const supabase = createAdminClient()
   const { error } = await supabase

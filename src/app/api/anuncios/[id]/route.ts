@@ -3,6 +3,7 @@ import { ZodError } from 'zod'
 import * as dal from '@/lib/dal/anuncios'
 import { updateNotaSchema } from '@/lib/validations/anuncio'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
+import { diffFields, logAudit, snapshotFields } from '@/lib/services/audit-service'
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requirePermission('anuncios.view')
@@ -30,6 +31,34 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     }
 
     const updated = await dal.updateNota(params.id, patch)
+    const changes = diffFields(
+      {
+        Título: nota.titulo,
+        Nota: nota.nota,
+        Responsable: nota.id_responsable,
+        Propiedad: nota.id_propiedad,
+        Fecha: nota.after_date,
+        Completada: nota.completada ?? false,
+      },
+      {
+        Título: patch.titulo,
+        Nota: patch.nota,
+        Responsable: patch.id_responsable,
+        Propiedad: patch.id_propiedad,
+        Fecha: patch.after_date,
+        Completada: patch.completada,
+      }
+    )
+    if (Object.keys(changes).length > 0) {
+      await logAudit({
+        actorId: auth.userId,
+        action: 'update',
+        entity: 'nota',
+        entityId: params.id,
+        entityLabel: nota.titulo || nota.nota.slice(0, 60),
+        changes,
+      })
+    }
     return NextResponse.json({ data: updated })
   } catch (err) {
     if (err instanceof ZodError) {
@@ -50,6 +79,14 @@ export async function DELETE(_request: NextRequest, { params }: { params: { id: 
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     await dal.deleteNota(params.id)
+    await logAudit({
+      actorId: auth.userId,
+      action: 'delete',
+      entity: 'nota',
+      entityId: params.id,
+      entityLabel: nota.titulo || nota.nota.slice(0, 60),
+      changes: snapshotFields({ Título: nota.titulo, Nota: nota.nota }, {}, 'antes'),
+    })
     return new NextResponse(null, { status: 204 })
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Error' }, { status: 500 })

@@ -13,6 +13,18 @@ export async function getRoles(): Promise<Role[]> {
   return data as Role[]
 }
 
+export async function getRoleById(id: string): Promise<Role | null> {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from('roles')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) return null
+  return (data as Role) ?? null
+}
+
 export async function getRoleByName(name: string): Promise<Role | null> {
   const supabase = createAdminClient()
   const { data, error } = await supabase

@@ -3,7 +3,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import { updateInventarioSchema } from '@/lib/validations/inventario'
 import * as propertyService from '@/lib/services/property-service'
-import { getPropertyById } from '@/lib/dal/properties'
+import {
+  INVENTARIO_FIELD_LABELS,
+  diffFields,
+  inventarioLabel,
+  logAudit,
+  pickFields,
+  snapshotFields,
+} from '@/lib/services/audit-service'
+import { getInventarioRawById, getPropertyById } from '@/lib/dal/properties'
 import { requireAnyPermission, isAuthError } from '@/lib/auth/permissions'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -64,7 +72,21 @@ export async function PUT(
   try {
     const body = await request.json()
     const validated = updateInventarioSchema.parse(body)
+    const before = await getInventarioRawById(id)
     const property = await propertyService.updateProperty(id, validated)
+    const changes = before
+      ? diffFields(before, validated, INVENTARIO_FIELD_LABELS)
+      : snapshotFields(validated, INVENTARIO_FIELD_LABELS)
+    if (Object.keys(changes).length > 0) {
+      await logAudit({
+        actorId: auth.user.id,
+        action: 'update',
+        entity: 'propiedad',
+        entityId: id,
+        entityLabel: inventarioLabel(before ?? validated),
+        changes,
+      })
+    }
     return NextResponse.json({ data: property })
   } catch (err) {
     if (err instanceof ZodError) {
@@ -94,7 +116,18 @@ export async function DELETE(
   }
 
   try {
+    const before = await getInventarioRawById(id)
     await propertyService.deleteProperty(id)
+    await logAudit({
+      actorId: auth.user.id,
+      action: 'delete',
+      entity: 'propiedad',
+      entityId: id,
+      entityLabel: inventarioLabel(before),
+      changes: before
+        ? snapshotFields(pickFields(before, INVENTARIO_FIELD_LABELS), INVENTARIO_FIELD_LABELS, 'antes')
+        : null,
+    })
     return new NextResponse(null, { status: 204 })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error deleting property'

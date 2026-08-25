@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { z, ZodError } from 'zod'
-import { updateColumnVisibility } from '@/lib/dal/column-visibility'
+import { getColumnVisibility, updateColumnVisibility } from '@/lib/dal/column-visibility'
+import { logAudit } from '@/lib/services/audit-service'
+import type { AuditChange } from '@/types/audit'
 
 export async function GET() {
   const supabase = await createClient()
@@ -48,7 +50,40 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
     const updates = updatePayloadSchema.parse(body)
 
+    const before = await getColumnVisibility().catch(() => [])
     await updateColumnVisibility(updates)
+
+    const byId = new Map(before.map((c) => [c.id, c]))
+    const changes: Record<string, AuditChange> = {}
+    for (const u of updates) {
+      const prev = byId.get(u.id)
+      if (!prev) continue
+      const col = prev.display_label || prev.column_name
+      if (prev.visible_to_asesores !== u.visible_to_asesores) {
+        changes[`${col} · visible para asesores`] = {
+          antes: prev.visible_to_asesores,
+          despues: u.visible_to_asesores,
+        }
+      }
+      if ((prev.display_label ?? '') !== u.display_label) {
+        changes[`${col} · etiqueta`] = { antes: prev.display_label, despues: u.display_label }
+      }
+      if (prev.display_order !== u.display_order) {
+        changes[`${col} · orden`] = { antes: prev.display_order, despues: u.display_order }
+      }
+      if ((prev.filter_type ?? 'none') !== u.filter_type) {
+        changes[`${col} · filtro`] = { antes: prev.filter_type, despues: u.filter_type }
+      }
+    }
+    if (Object.keys(changes).length > 0) {
+      await logAudit({
+        actorId: auth.userId,
+        action: 'update',
+        entity: 'columnas',
+        entityLabel: 'Configuración de columnas',
+        changes,
+      })
+    }
 
     return NextResponse.json({ success: true })
   } catch (err) {

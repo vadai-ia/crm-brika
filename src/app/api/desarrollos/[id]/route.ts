@@ -3,6 +3,7 @@ import { ZodError } from 'zod'
 import { updateDesarrolloSchema } from '@/lib/validations/desarrollo'
 import * as dal from '@/lib/dal/desarrollos'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
+import { diffFields, logAudit } from '@/lib/services/audit-service'
 
 export async function PUT(
   request: NextRequest,
@@ -18,7 +19,23 @@ export async function PUT(
   try {
     const body = await request.json()
     const validated = updateDesarrolloSchema.parse(body)
+    const before = await dal.getDesarrolloById(numId)
     const desarrollo = await dal.updateDesarrollo(numId, validated as Record<string, unknown>)
+    const changes = diffFields(
+      (before ?? {}) as unknown as Record<string, unknown>,
+      validated as Record<string, unknown>
+    )
+    if (Object.keys(changes).length > 0) {
+      await logAudit({
+        actorId: auth.userId,
+        action: 'update',
+        entity: 'desarrollo',
+        entityId: String(numId),
+        entityLabel:
+          before?.nombre_kibah ?? before?.nombre_desarrollador ?? String(numId),
+        changes,
+      })
+    }
     return NextResponse.json({ data: desarrollo })
   } catch (err) {
     if (err instanceof ZodError) {
@@ -41,7 +58,15 @@ export async function DELETE(
   if (isNaN(numId)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
 
   try {
+    const before = await dal.getDesarrolloById(numId)
     await dal.deleteDesarrollo(numId)
+    await logAudit({
+      actorId: auth.userId,
+      action: 'delete',
+      entity: 'desarrollo',
+      entityId: String(numId),
+      entityLabel: before?.nombre_kibah ?? before?.nombre_desarrollador ?? String(numId),
+    })
     return new NextResponse(null, { status: 204 })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error deleting desarrollo'

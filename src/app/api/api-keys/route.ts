@@ -4,6 +4,7 @@ import { createApiKeySchema } from '@/lib/validations/api-key'
 import * as dal from '@/lib/dal/api-keys'
 import * as apiKeyService from '@/lib/services/api-key-service'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
+import { logAudit, snapshotFields } from '@/lib/services/audit-service'
 
 export async function GET() {
   const auth = await requirePermission('apikeys.view')
@@ -26,6 +27,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validated = createApiKeySchema.parse(body)
     const result = await apiKeyService.generateApiKey(validated, auth.userId)
+    await logAudit({
+      actorId: auth.userId,
+      action: 'create',
+      entity: 'api_key',
+      entityId: result.id,
+      entityLabel: result.name,
+      changes: snapshotFields({
+        Nombre: result.name,
+        Prefijo: result.key_prefix,
+        Permisos: result.permissions,
+        Expira: result.expires_at,
+      }),
+    })
     return NextResponse.json({ data: result }, { status: 201 })
   } catch (err) {
     if (err instanceof ZodError) {

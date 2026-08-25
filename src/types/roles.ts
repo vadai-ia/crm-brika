@@ -35,6 +35,7 @@ export const ALL_PERMISSIONS: Record<string, string> = {
   'apikeys.manage': 'Gestionar API keys',
   'carga_masiva.view': 'Carga Masiva',
   'formularios.view': 'Ver formularios web (leads)',
+  'logs.view': 'Ver historial (Logs)',
 }
 
 export const PERMISSION_GROUPS: { label: string; keys: string[] }[] = [
@@ -51,4 +52,5 @@ export const PERMISSION_GROUPS: { label: string; keys: string[] }[] = [
   { label: 'API Keys', keys: ['apikeys.view', 'apikeys.manage'] },
   { label: 'Carga Masiva', keys: ['carga_masiva.view'] },
   { label: 'Formularios Web', keys: ['formularios.view'] },
+  { label: 'Logs', keys: ['logs.view'] },
 ]

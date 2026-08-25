@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import * as dal from '@/lib/dal/asesores'
 import { createAsesorSchema } from '@/lib/validations/asesor'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
-import { ROLE_ADMIN } from '@/lib/utils/constants'
+import { ROLE_ADMIN, ROLE_ASESOR } from '@/lib/utils/constants'
+import { logAudit, snapshotFields } from '@/lib/services/audit-service'
 import { asesorErrorResponse } from './errors'
 
 /**
@@ -46,6 +47,18 @@ export async function POST(request: NextRequest) {
     }
 
     const profile = await dal.createAsesor(validated)
+    await logAudit({
+      actorId: auth.userId,
+      action: 'create',
+      entity: 'usuario',
+      entityId: profile.id,
+      entityLabel: `${profile.full_name} (${profile.email})`,
+      changes: snapshotFields({
+        Nombre: validated.full_name,
+        Email: validated.email,
+        Rol: validated.role ?? ROLE_ASESOR,
+      }),
+    })
     return NextResponse.json({ data: profile }, { status: 201 })
   } catch (err) {
     return asesorErrorResponse(err, 'Error creating asesor')

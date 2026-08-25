@@ -18,6 +18,7 @@ import {
   Webhook,
   Key,
   // Shield,     // Roles (oculto)
+  History,
   Upload,
   Menu,
   X,
@@ -149,6 +150,7 @@ export function Sidebar({ role }: { role: UserRole }) {
     // { label: 'Roles', href: '/dashboard/admin/roles', icon: <Shield className="w-5 h-5" strokeWidth={1.5} /> },
     { label: 'Webhooks', href: '/dashboard/admin/webhooks', icon: <Webhook className="w-5 h-5" strokeWidth={1.5} />, permission: 'webhooks.view' },
     { label: 'API Keys', href: '/dashboard/admin/api-keys', icon: <Key className="w-5 h-5" strokeWidth={1.5} />, permission: 'apikeys.view' },
+    { label: 'Logs', href: '/dashboard/admin/logs', icon: <History className="w-5 h-5" strokeWidth={1.5} />, permission: 'logs.view' },
   ]
 
   // Hide nav items until permissions are loaded to avoid showing stale

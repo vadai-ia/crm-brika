@@ -3,6 +3,7 @@ import { ZodError } from 'zod'
 import * as dal from '@/lib/dal/anuncios'
 import { createNotaSchema } from '@/lib/validations/anuncio'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
+import { logAudit, snapshotFields } from '@/lib/services/audit-service'
 
 const ESTADOS: dal.EstadoFilter[] = ['pendientes', 'completadas', 'todas']
 
@@ -44,6 +45,20 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const input = createNotaSchema.parse(body)
     const nota = await dal.createNota(input, auth.userId)
+    await logAudit({
+      actorId: auth.userId,
+      action: 'create',
+      entity: 'nota',
+      entityId: nota.id,
+      entityLabel: nota.titulo || nota.nota.slice(0, 60),
+      changes: snapshotFields({
+        Título: nota.titulo,
+        Nota: nota.nota,
+        Responsable: nota.responsable_nombre,
+        Propiedad: nota.propiedad_nombre,
+        Fecha: nota.after_date,
+      }),
+    })
     return NextResponse.json({ data: nota }, { status: 201 })
   } catch (err) {
     if (err instanceof ZodError) {

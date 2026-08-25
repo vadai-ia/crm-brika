@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import { getProfileById, resetAsesorPassword } from '@/lib/dal/asesores'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
 import { ROLE_ADMIN } from '@/lib/utils/constants'
+import { logAudit } from '@/lib/services/audit-service'
 import { asesorErrorResponse } from '../../errors'
 
 export async function POST(
@@ -26,6 +27,13 @@ export async function POST(
 
     const newPassword = crypto.randomBytes(9).toString('base64url').slice(0, 12)
     await resetAsesorPassword(id, newPassword)
+    await logAudit({
+      actorId: auth.userId,
+      action: 'reset_password',
+      entity: 'usuario',
+      entityId: id,
+      entityLabel: `${target.full_name} (${target.email})`,
+    })
     return NextResponse.json({ password: newPassword })
   } catch (err) {
     return asesorErrorResponse(err, 'Error resetting password')

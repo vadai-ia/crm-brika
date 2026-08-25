@@ -3,6 +3,7 @@ import * as dal from '@/lib/dal/asesores'
 import { updateAsesorSchema } from '@/lib/validations/asesor'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
 import { ROLE_ADMIN } from '@/lib/utils/constants'
+import { diffFields, logAudit, snapshotFields } from '@/lib/services/audit-service'
 import { asesorErrorResponse } from '../errors'
 
 type RouteContext = { params: Promise<{ id: string }> }
@@ -45,6 +46,34 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     }
 
     const updated = await dal.updateAsesor(id, patch)
+    const changes = diffFields(
+      {
+        Nombre: target.full_name,
+        Email: target.email,
+        Rol: target.role,
+        Activo: target.is_active,
+        Avatar: target.avatar_url,
+        Tema: target.theme_preference,
+      },
+      {
+        Nombre: patch.full_name,
+        Email: patch.email,
+        Rol: patch.role,
+        Activo: patch.is_active,
+        Avatar: patch.avatar_url,
+        Tema: patch.theme_preference,
+      }
+    )
+    if (Object.keys(changes).length > 0) {
+      await logAudit({
+        actorId: auth.userId,
+        action: 'update',
+        entity: 'usuario',
+        entityId: id,
+        entityLabel: `${target.full_name} (${target.email})`,
+        changes,
+      })
+    }
     return NextResponse.json({ data: updated })
   } catch (err) {
     return asesorErrorResponse(err, 'Error updating asesor')
@@ -72,6 +101,18 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
     }
 
     await dal.deleteAsesor(id)
+    await logAudit({
+      actorId: auth.userId,
+      action: 'delete',
+      entity: 'usuario',
+      entityId: id,
+      entityLabel: `${target.full_name} (${target.email})`,
+      changes: snapshotFields(
+        { Nombre: target.full_name, Email: target.email, Rol: target.role },
+        {},
+        'antes'
+      ),
+    })
     return new NextResponse(null, { status: 204 })
   } catch (err) {
     return asesorErrorResponse(err, 'Error deleting asesor')

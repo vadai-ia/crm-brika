@@ -4,6 +4,13 @@ import { requirePermission, isAuthError } from '@/lib/auth/permissions'
 import { INVENTARIO_TABLE } from '@/lib/utils/inventario'
 import { INVENTARIO_COLUMNS } from '@/components/carga-masiva/columns'
 import { detectPending } from '@/lib/services/photo-sync/sync'
+import {
+  INVENTARIO_FIELD_LABELS,
+  diffFields,
+  inventarioLabel,
+  logAudit,
+} from '@/lib/services/audit-service'
+import type { BulkRowDetail } from '@/types/audit'
 
 const ALLOWED = new Set(INVENTARIO_COLUMNS.map((c) => c.dbColumn))
 const NUMERIC = new Set(INVENTARIO_COLUMNS.filter((c) => c.type === 'number').map((c) => c.dbColumn))
@@ -51,26 +58,55 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient()
 
-    // Ids de las filas que ya existen
+    // Filas que ya existen (completas, para el diff del historial)
     const parques = [...new Set(rows.map((r) => String(r.parque)))]
     const { data: existing, error: exErr } = await supabase
       .from(INVENTARIO_TABLE)
-      .select('id, parque, unidad, operacion')
+      .select('*')
       .in('parque', parques)
     if (exErr) {
       return NextResponse.json({ error: exErr.message }, { status: 500 })
     }
-    const existingIds = new Map<string, string>()
-    for (const r of existing ?? []) {
-      existingIds.set(tripleKey(r.parque, r.unidad, r.operacion), r.id as string)
+    const existingByKey = new Map<string, Record<string, unknown>>()
+    for (const r of (existing ?? []) as Array<Record<string, unknown>>) {
+      existingByKey.set(tripleKey(r.parque, r.unidad, r.operacion), r)
     }
 
     const toInsert: Array<Record<string, unknown>> = []
-    const toUpdate: Array<{ id: string; fields: Record<string, unknown> }> = []
+    const toUpdate: Array<{
+      id: string
+      fields: Record<string, unknown>
+      before: Record<string, unknown>
+    }> = []
     for (const row of rows) {
-      const id = existingIds.get(tripleKey(row.parque, row.unidad, row.operacion))
-      if (id) toUpdate.push({ id, fields: row })
+      const current = existingByKey.get(tripleKey(row.parque, row.unidad, row.operacion))
+      if (current) toUpdate.push({ id: String(current.id), fields: row, before: current })
       else toInsert.push(row)
+    }
+
+    // Detalle para el historial de auditoría (capado para no inflar el log)
+    const MAX_DETAIL = 300
+    const buildBulkMetadata = (updatedCount: number, error?: string) => {
+      const actualizadas: BulkRowDetail[] = []
+      for (const { fields, before } of toUpdate.slice(0, MAX_DETAIL)) {
+        const cambios = diffFields(before, fields, INVENTARIO_FIELD_LABELS)
+        if (Object.keys(cambios).length > 0) {
+          actualizadas.push({ propiedad: inventarioLabel(fields), cambios })
+        }
+      }
+      return {
+        inserted: toInsert.length,
+        updated: updatedCount,
+        nuevas: toInsert.slice(0, MAX_DETAIL).map((r) => inventarioLabel(r)),
+        actualizadas,
+        ...(toInsert.length > MAX_DETAIL
+          ? { nuevas_omitidas: toInsert.length - MAX_DETAIL }
+          : {}),
+        ...(toUpdate.length > MAX_DETAIL
+          ? { actualizadas_omitidas: toUpdate.length - MAX_DETAIL }
+          : {}),
+        ...(error ? { error } : {}),
+      }
     }
 
     // Insert masivo: PostgREST exige llaves uniformes → normalizar con null
@@ -105,6 +141,13 @@ export async function POST(request: NextRequest) {
       const failed = results.find((r) => r.error)
       updated += results.filter((r) => !r.error).length
       if (failed?.error) {
+        await logAudit({
+          actorId: auth.userId,
+          action: 'carga_masiva',
+          entity: 'propiedad',
+          entityLabel: `${toInsert.length} nuevas, ${updated} actualizadas (con error)`,
+          metadata: buildBulkMetadata(updated, failed.error.message),
+        })
         return NextResponse.json(
           {
             error: `Se agregaron ${toInsert.length} y se actualizaron ${updated} de ${toUpdate.length}, pero una actualización falló: ${failed.error.message}`,
@@ -113,6 +156,14 @@ export async function POST(request: NextRequest) {
         )
       }
     }
+
+    await logAudit({
+      actorId: auth.userId,
+      action: 'carga_masiva',
+      entity: 'propiedad',
+      entityLabel: `${toInsert.length} nuevas, ${updated} actualizadas`,
+      metadata: buildBulkMetadata(updated),
+    })
 
     // Fotos: registra carpetas de Drive nuevas y mapea propiedades (solo BD); la
     // importación la dispara el cliente al volver a Propiedades (usePhotoSync).

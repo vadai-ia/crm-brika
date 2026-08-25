@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import * as dal from '@/lib/dal/roles'
+import { logAudit, snapshotFields } from '@/lib/services/audit-service'
+import { ALL_PERMISSIONS } from '@/types/roles'
 
 export async function GET() {
   const supabase = await createClient()
@@ -28,6 +30,22 @@ export async function POST(request: NextRequest) {
     const { name, display_name, description, permissions } = body
     if (!name || !display_name) return NextResponse.json({ error: 'name y display_name requeridos' }, { status: 400 })
     const role = await dal.createRole(name, display_name, description || null, permissions || {})
+    const otorgados = Object.entries((permissions ?? {}) as Record<string, boolean>)
+      .filter(([, v]) => v === true)
+      .map(([k]) => ALL_PERMISSIONS[k] ?? k)
+    await logAudit({
+      actorId: user.id,
+      action: 'create',
+      entity: 'rol',
+      entityId: role.id,
+      entityLabel: role.display_name,
+      changes: snapshotFields({
+        'Nombre interno': name,
+        Nombre: display_name,
+        Descripción: description,
+        Permisos: otorgados,
+      }),
+    })
     return NextResponse.json({ data: role }, { status: 201 })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error'

@@ -3,6 +3,7 @@ import { ZodError } from 'zod'
 import { createDesarrolloSchema } from '@/lib/validations/desarrollo'
 import * as dal from '@/lib/dal/desarrollos'
 import { requirePermission, isAuthError } from '@/lib/auth/permissions'
+import { logAudit, snapshotFields } from '@/lib/services/audit-service'
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission('desarrollos.view')
@@ -41,6 +42,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validated = createDesarrolloSchema.parse(body)
     const desarrollo = await dal.insertDesarrollo(validated as Record<string, unknown>)
+    await logAudit({
+      actorId: auth.userId,
+      action: 'create',
+      entity: 'desarrollo',
+      entityId: String(desarrollo.id),
+      entityLabel: desarrollo.nombre_kibah ?? desarrollo.nombre_desarrollador ?? String(desarrollo.id),
+      changes: snapshotFields(validated as Record<string, unknown>),
+    })
     return NextResponse.json({ data: desarrollo }, { status: 201 })
   } catch (err) {
     if (err instanceof ZodError) {
