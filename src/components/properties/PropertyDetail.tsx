@@ -19,6 +19,7 @@ import {
 import type { Property, UserRole } from '@/types'
 import { formatPrice, formatM2, formatComision, capitalize } from '@/lib/utils/format'
 import { PropertyDetailGallery } from './PropertyDetailGallery'
+import { PhotoRefreshButton } from './PhotoRefreshButton'
 
 interface PropertyDetailProps {
   property: Property
@@ -234,6 +235,11 @@ export function PropertyDetail({ property, role, onClose, onEdit, onDelete, onCr
                 Drive
               </a>
             )}
+            <PhotoRefreshButton
+              propertyId={String(property.id)}
+              hasLink={Boolean(property.link_drive)}
+              label
+            />
             {isAdmin && onEdit && (
               <button
                 onClick={() => { onClose(); onEdit(property) }}

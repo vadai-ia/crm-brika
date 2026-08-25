@@ -119,3 +119,15 @@ export interface SyncStepResult {
   error: string | null
   propertyIds: string[]
 }
+
+/**
+ * Resultado del botón "Actualizar fotos": revisión forzada (sin ventana de
+ * 24 h) de la carpeta de Drive de una propiedad.
+ */
+export type ForceCheckStatus = 'pending' | 'unchanged' | 'no_link' | 'not_public'
+
+export interface ForceCheckResult {
+  status: ForceCheckStatus
+  setId?: number
+  message?: string
+}

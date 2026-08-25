@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import * as sets from '@/lib/dal/image-sets'
 import { invalidateSetListCache } from '@/lib/dal/property-images'
-import type { ImageSetRow, ImageSetStatus, PendingSet, PhotoManifest, SyncProgress, SyncStepResult } from '@/types/inventario'
+import type { ForceCheckResult, ImageSetRow, ImageSetStatus, PendingSet, PhotoManifest, SyncProgress, SyncStepResult } from '@/types/inventario'
 import { collectFiles, downloadFile, folderIdFromUrl, listFolder, type DriveFile } from './drive'
 import { optimizeImage } from './optimize'
 import { emptyManifest, readManifest, removeExcept, uploadPhoto, writeManifest } from './bucket'
@@ -178,6 +178,61 @@ export async function checkForChanges(row: ImageSetRow): Promise<boolean> {
     node.title !== row.drive_title
   await sets.updateImageSet(row.id, { progress, ...(changed ? { status: 'pending' as ImageSetStatus } : {}) })
   return changed
+}
+
+/**
+ * Botón "Actualizar fotos" de la tarjeta: revisa AHORA la carpeta de Drive de
+ * una propiedad, sin esperar la ventana de 24 h. Si hay cambios (o el set
+ * estaba en error o aún sin importar) lo deja pendiente; la importación la
+ * corre el cliente con el flujo normal (usePhotoSync).
+ */
+export async function forceCheckProperty(propertyId: string): Promise<ForceCheckResult> {
+  const prop = await sets.getPropertyLink(propertyId)
+  const folderId = prop?.link ? folderIdFromUrl(prop.link) : null
+  if (!folderId) return { status: 'no_link' }
+
+  // Si la carpeta es nueva crea el set y mapea la propiedad (solo BD, rápido)
+  await detectPending()
+  const row = (await sets.getAllImageSets()).find((r) => r.drive_folder_id === folderId)
+  if (!row) return { status: 'no_link' }
+
+  if (ACTIVE.includes(row.status)) return { status: 'pending', setId: row.id }
+
+  const progress: SyncProgress = {
+    ...(row.progress ?? emptyProgress()),
+    checkedAt: new Date().toISOString(),
+  }
+
+  // Un set en error se reintenta de inmediato (el flujo automático espera 24 h)
+  if (row.status === 'error') {
+    await sets.updateImageSet(row.id, {
+      status: 'pending',
+      progress: { ...progress, skipped: [] },
+      last_error: null,
+    })
+    return { status: 'pending', setId: row.id }
+  }
+
+  const node = await listFolder(row.drive_folder_id)
+  if (!node.public) {
+    await sets.updateImageSet(row.id, { progress })
+    return {
+      status: 'not_public',
+      setId: row.id,
+      message: `No se pudo leer la carpeta de Drive: ${node.reason}. Compártela como "Cualquier persona con el enlace → Lector".`,
+    }
+  }
+
+  const ids = new Set(collectFiles(node).map((f) => f.id))
+  const manifest = await readManifest(createAdminClient(), row.id)
+  const known = new Set(Object.keys(manifest?.files ?? {}))
+  const skipped = new Set(progress.skipped.map((s) => s.id))
+  const changed =
+    [...ids].some((id) => !known.has(id) && !skipped.has(id)) ||
+    [...known].some((id) => !ids.has(id)) ||
+    node.title !== row.drive_title
+  await sets.updateImageSet(row.id, { progress, ...(changed ? { status: 'pending' as ImageSetStatus } : {}) })
+  return { status: changed ? 'pending' : 'unchanged', setId: row.id }
 }
 
 const CHECK_EVERY_MS = 24 * 60 * 60 * 1000

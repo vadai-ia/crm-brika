@@ -10,6 +10,7 @@ import { usePhotoSync } from '@/hooks/usePhotoSync'
 import { formatPrice, displayValue, capitalize } from '@/lib/utils/format'
 import { PropertyCardCover } from './PropertyCardCover'
 import { PropertyCardGallery } from './PropertyCardGallery'
+import { PhotoRefreshButton } from './PhotoRefreshButton'
 
 function disponibilidadBadge(value: string | null | undefined): string {
   if (!value) return ''
@@ -69,6 +70,7 @@ export function PropertyCard({
   const { images } = usePropertyImages(propertyId)
   const hiddenCount = images ? images.filter((img) => !img.visible).length : (cover?.hidden ?? 0)
   const syncing = usePhotoSync().syncingIds.has(propertyId)
+  const hasDriveLink = Boolean(property.link_drive)
 
   const openDetail = () => onClick(property)
   const handleBodyKey = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -100,7 +102,7 @@ export function PropertyCard({
         className="flex-1 p-5 text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-orange focus-visible:ring-inset"
       >
         {/* Actions row — PDF + admin buttons on one line */}
-        {(isAdmin || onTogglePdf || onCreatePdf) && (
+        {(isAdmin || onTogglePdf || onCreatePdf || hasDriveLink) && (
           <div className="flex items-center justify-end gap-1 mb-2">
             {onCreatePdf && (
               <button
@@ -113,6 +115,7 @@ export function PropertyCard({
                 Crear PDF
               </button>
             )}
+            <PhotoRefreshButton propertyId={propertyId} hasLink={hasDriveLink} />
             {onTogglePdf && (
               <button
                 type="button"

@@ -1,7 +1,7 @@
 'use client'
 
 import { useSyncExternalStore } from 'react'
-import type { PendingSet, SyncStepResult } from '@/types/inventario'
+import type { ForceCheckResult, PendingSet, SyncStepResult } from '@/types/inventario'
 import { refreshCovers } from '@/hooks/usePropertyCovers'
 import { invalidatePropertyImages } from '@/hooks/usePropertyImages'
 
@@ -133,4 +133,42 @@ export function startPhotoSync(detect = true) {
 
 export function usePhotoSync(): PhotoSyncState {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+}
+
+export type PhotoRefreshOutcome =
+  | { result: 'importing' }
+  | { result: 'unchanged' }
+  | { result: 'no_link' }
+  | { result: 'error'; message: string }
+
+/**
+ * Botón "Actualizar fotos": fuerza la revisión de la carpeta de Drive de la
+ * propiedad (sin ventana de 24 h) y, si hay algo nuevo, arranca la
+ * importación normal (banner + tarjeta "Importando fotos…").
+ */
+export async function refreshPropertyPhotos(propertyId: string): Promise<PhotoRefreshOutcome> {
+  try {
+    const res = await fetch('/api/fotos/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ propertyId }),
+      cache: 'no-store',
+    })
+    const json = (await res.json().catch(() => null)) as
+      | { data?: ForceCheckResult; error?: string }
+      | null
+    if (!res.ok || !json?.data) {
+      return { result: 'error', message: json?.error ?? 'No se pudo revisar la carpeta de Drive' }
+    }
+    const { data } = json
+    if (data.status === 'pending') {
+      startPhotoSync(false)
+      return { result: 'importing' }
+    }
+    if (data.status === 'unchanged') return { result: 'unchanged' }
+    if (data.status === 'no_link') return { result: 'no_link' }
+    return { result: 'error', message: data.message ?? 'La carpeta de Drive no es pública' }
+  } catch {
+    return { result: 'error', message: 'No se pudo revisar la carpeta de Drive' }
+  }
 }
