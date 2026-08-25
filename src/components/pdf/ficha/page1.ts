@@ -3,7 +3,7 @@
 
 import type { jsPDF } from 'jspdf'
 import type { FichaData } from './data'
-import { fadeBottom, drawChips, spacedTextRight } from './draw'
+import { fadeBottom, drawChips, fitTextSize, spacedTextRight } from './draw'
 import {
   BG_SOFT, DIVIDER, GRAY, GRAY_LIGHT, INK, MARGIN, PAGE_H, PAGE_W,
   PURPLE, PURPLE_SOFT, TAGLINE_L1, TAGLINE_L2, WHITE,
@@ -27,7 +27,7 @@ export function renderPage1(
   // === Membrete claro: logo + tagline ===
   if (logo) {
     const logoH = 10
-    doc.addImage(logo, 'PNG', mx, 8, logoH * LOGO_WORDMARK_RATIO, logoH)
+    doc.addImage(logo, 'PNG', mx, 8, logoH * LOGO_WORDMARK_RATIO, logoH, 'brika-logo', 'FAST')
   } else {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(15)
@@ -73,9 +73,10 @@ export function renderPage1(
   }
 
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
   doc.setTextColor(photoDrawn ? WHITE : GRAY)
-  doc.text(ficha.subtitle, mx, HERO_H - 11)
+  const subFit = fitTextSize(doc, ficha.subtitle, cw, 10, 8.5)
+  doc.setFontSize(subFit.size)
+  doc.text(subFit.text, mx, HERO_H - 11)
 
   // === Barra de acento morado ===
   doc.setFillColor(PURPLE)
@@ -91,12 +92,16 @@ export function renderPage1(
       doc.setFillColor(PURPLE)
       doc.rect(x, y, 7, 1.5, 'F')
 
+      // El valor NUNCA invade la columna vecina: se reduce el tamaño de
+      // fuente y, en el extremo, se recorta con "…" (fitTextSize)
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(16)
       doc.setTextColor(INK)
-      doc.text(s.value, x, y + 9)
+      const unitW = s.unit ? 8 : 0
+      const vFit = fitTextSize(doc, s.value, colW - 5 - unitW, 16, 10)
+      doc.setFontSize(vFit.size)
+      doc.text(vFit.text, x, y + 9)
       if (s.unit) {
-        const vw = doc.getTextWidth(s.value)
+        const vw = doc.getTextWidth(vFit.text)
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
         doc.setTextColor(GRAY)
@@ -144,7 +149,7 @@ export function renderPage1(
   doc.line(mx, fy, PAGE_W - mx, fy)
   if (logo) {
     const logoH = 4.5
-    doc.addImage(logo, 'PNG', mx, fy + 2.5, logoH * LOGO_WORDMARK_RATIO, logoH)
+    doc.addImage(logo, 'PNG', mx, fy + 2.5, logoH * LOGO_WORDMARK_RATIO, logoH, 'brika-logo', 'FAST')
   } else {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(7.5)

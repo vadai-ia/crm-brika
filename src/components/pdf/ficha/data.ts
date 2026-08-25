@@ -79,6 +79,25 @@ function plural(v: string, singular: string, pluralWord: string): string {
   return v
 }
 
+/** ¿El valor es un conteo puro ("3", "2.5")? Texto libre no sirve como stat. */
+function esConteo(v: string): boolean {
+  return /^[\d.,\s]+$/.test(v)
+}
+
+// Valor compacto para la franja de estadísticas: los textos largos de la BD
+// ("Mínima 6 m, hasta 7 m en la parte de atrás") se reducen a su rango
+// numérico ("6 a 7 m"); sin números no hay stat — el texto completo se
+// conserva en las secciones de la página 2.
+function compactStat(v: string, unit: string, maxLen = 14): string | null {
+  if (!v) return null
+  if (v.length <= maxLen) return withUnit(v, unit)
+  const nums = v.match(/\d+(?:[.,]\d+)?/g)
+  if (!nums || nums.length === 0) return null
+  const uniq = [...new Set(nums)]
+  const range = uniq.length >= 2 ? `${uniq[0]} a ${uniq[1]}` : uniq[0]
+  return `${range} ${unit}`
+}
+
 function lcFirst(s: string): string {
   return s.charAt(0).toLowerCase() + s.slice(1)
 }
@@ -137,10 +156,12 @@ export function buildFicha(property: Property): FichaData {
   if (area) {
     stats.push({ value: fmtNum(area), unit: 'm²', label: m2Rentables ? 'ÁREA RENTABLE' : 'SUPERFICIE' })
   }
-  if (altura) stats.push({ value: withUnit(altura, 'm'), label: 'ALTURA LIBRE' })
-  if (andenes) stats.push({ value: plural(andenes, 'andén', 'andenes'), label: 'LOGÍSTICA' })
-  else if (rampas) stats.push({ value: plural(rampas, 'rampa', 'rampas'), label: 'LOGÍSTICA' })
-  if (kva) stats.push({ value: withUnit(kva, 'KVA'), label: 'ENERGÍA DISPONIBLE' })
+  const alturaStat = compactStat(altura, 'm')
+  if (alturaStat) stats.push({ value: alturaStat, label: 'ALTURA LIBRE' })
+  if (andenes && esConteo(andenes)) stats.push({ value: plural(andenes, 'andén', 'andenes'), label: 'LOGÍSTICA' })
+  else if (rampas && esConteo(rampas)) stats.push({ value: plural(rampas, 'rampa', 'rampas'), label: 'LOGÍSTICA' })
+  const kvaStat = compactStat(kva, 'KVA')
+  if (kvaStat) stats.push({ value: kvaStat, label: 'ENERGÍA DISPONIBLE' })
   if (esRenta && renta) {
     stats.push({ value: fmtMoney(renta), label: 'RENTA MENSUAL', sub: `(${moneda})` })
   } else if (venta) {

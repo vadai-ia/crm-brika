@@ -4,7 +4,7 @@
 
 import type { jsPDF } from 'jspdf'
 import type { FichaData, FichaSection } from './data'
-import { drawBullet, drawChips, spacedTextCenter, spacedTextRight } from './draw'
+import { drawBullet, drawChips, fitTextSize, spacedTextCenter, spacedTextRight } from './draw'
 import {
   BG_SOFT, CONTACT_EMAIL, CONTACT_PHONE, DIVIDER, GRAY, GRAY_LIGHT, INK,
   LEGAL, MARGIN, PAGE_H, PAGE_W, PURPLE, TAGLINE_FULL,
@@ -30,7 +30,7 @@ function drawSection(doc: jsPDF, s: FichaSection, x: number, y: number, w: numbe
     doc.text(row.label, x, ry)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(INK)
-    const valueLines = (doc.splitTextToSize(row.value, w * 0.55) as string[]).slice(0, 2)
+    const valueLines = (doc.splitTextToSize(row.value, w * 0.55) as string[]).slice(0, 3)
     for (const line of valueLines) {
       doc.text(line, x + w, ry, { align: 'right' })
       ry += 4.4
@@ -47,7 +47,7 @@ export function renderPage2(doc: jsPDF, ficha: FichaData, logo: string | null): 
   // === Encabezado ===
   if (logo) {
     const logoH = 8
-    doc.addImage(logo, 'PNG', mx, 11.5, logoH * LOGO_WORDMARK_RATIO, logoH)
+    doc.addImage(logo, 'PNG', mx, 11.5, logoH * LOGO_WORDMARK_RATIO, logoH, 'brika-logo', 'FAST')
   } else {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(14)
@@ -109,9 +109,10 @@ export function renderPage2(doc: jsPDF, ficha: FichaData, logo: string | null): 
       doc.setTextColor(GRAY)
       doc.text(c.label, x, y + 8, { charSpace: 0.5 })
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(c.highlight ? 14 : 11.5)
       doc.setTextColor(c.highlight ? PURPLE : INK)
-      doc.text(c.value, x, y + 16)
+      const vFit = fitTextSize(doc, c.value, cellW - 6, c.highlight ? 14 : 11.5, 8)
+      doc.setFontSize(vFit.size)
+      doc.text(vFit.text, x, y + 16)
       if (c.sub) {
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(7)
@@ -152,9 +153,10 @@ export function renderPage2(doc: jsPDF, ficha: FichaData, logo: string | null): 
     y += 5
   }
 
-  // Círculos concéntricos (zona de influencia)
+  // Círculos concéntricos (zona de influencia). El tope evita que la leyenda
+  // inferior invada el pie cuando las secciones de arriba crecen.
   const ccx = mx + cw * 0.8
-  const ccy = locTop + 24
+  const ccy = Math.min(locTop + 24, PAGE_H - FOOTER_H - 33)
   // Tonos lila decrecientes hacia afuera (la opacidad de trazo no es fiable
   // en todos los visores; colores sólidos dan el mismo efecto)
   const radii: Array<[number, string]> = [[24, '#EFDCFA'], [17.5, '#D9A9F2'], [11, '#B44FE4']]
@@ -180,7 +182,7 @@ export function renderPage2(doc: jsPDF, ficha: FichaData, logo: string | null): 
   doc.line(mx, fy, PAGE_W - mx, fy)
   if (logo) {
     const logoH = 8
-    doc.addImage(logo, 'PNG', mx, fy + 4.5, logoH * LOGO_WORDMARK_RATIO, logoH)
+    doc.addImage(logo, 'PNG', mx, fy + 4.5, logoH * LOGO_WORDMARK_RATIO, logoH, 'brika-logo', 'FAST')
   } else {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(12)

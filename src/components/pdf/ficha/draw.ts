@@ -43,12 +43,21 @@ export function drawChips(
   doc.setFontSize(8)
   doc.setFont('helvetica', 'normal')
 
+  const fixedW = padX + checkW + 1.6 + padX
   let cx = x
   let cy = y
   let rows = 1
   for (const chip of chips) {
-    const textW = doc.getTextWidth(chip)
-    const w = padX + checkW + 1.6 + textW + padX
+    // Un chip más ancho que la fila completa se recorta con "…" (nunca se
+    // sale del margen)
+    let label = chip
+    if (fixedW + doc.getTextWidth(label) > maxW) {
+      while (label.length > 1 && fixedW + doc.getTextWidth(label + '…') > maxW) {
+        label = label.slice(0, -1)
+      }
+      label += '…'
+    }
+    const w = fixedW + doc.getTextWidth(label)
     if (cx + w > x + maxW) {
       if (rows >= maxRows) break
       rows += 1
@@ -61,7 +70,7 @@ export function drawChips(
     doc.roundedRect(cx, cy, w, h, h / 2, h / 2, 'FD')
     drawCheck(doc, cx + padX, cy + h / 2 + 0.5, checkW)
     doc.setTextColor(INK)
-    doc.text(chip, cx + padX + checkW + 1.6, cy + h / 2 + 1.1)
+    doc.text(label, cx + padX + checkW + 1.6, cy + h / 2 + 1.1)
     cx += w + gap
   }
   return cy + h
@@ -85,4 +94,27 @@ export function spacedTextCenter(doc: jsPDF, text: string, xCenter: number, y: n
 export function drawBullet(doc: jsPDF, x: number, y: number): void {
   doc.setFillColor(PURPLE)
   doc.circle(x, y, 0.8, 'F')
+}
+
+/**
+ * Ajusta un texto a un ancho máximo: primero reduce el tamaño de fuente (de
+ * baseSize hasta minSize) y, si aun así no cabe, recorta con "…". La fuente
+ * (familia/estilo) debe estar ya seleccionada en el doc; el caller aplica el
+ * tamaño devuelto con setFontSize antes de dibujar.
+ */
+export function fitTextSize(
+  doc: jsPDF,
+  text: string,
+  maxW: number,
+  baseSize: number,
+  minSize: number
+): { text: string; size: number } {
+  for (let size = baseSize; size >= minSize; size -= 0.5) {
+    doc.setFontSize(size)
+    if (doc.getTextWidth(text) <= maxW) return { text, size }
+  }
+  doc.setFontSize(minSize)
+  let t = text
+  while (t.length > 1 && doc.getTextWidth(t + '…') > maxW) t = t.slice(0, -1)
+  return { text: t + '…', size: minSize }
 }
