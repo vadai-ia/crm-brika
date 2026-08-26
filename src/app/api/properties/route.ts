@@ -13,6 +13,12 @@ import {
 } from '@/lib/services/audit-service'
 import { resolveColumnVariants } from '@/lib/dal/filter-options'
 import {
+  applyKeysetCursor,
+  cursorValue,
+  decodeKeysetCursor,
+  encodeKeysetCursor,
+} from '@/lib/dal/keyset-pagination'
+import {
   INVENTARIO_TABLE,
   KEY_TO_COLUMN,
   SEARCH_COLUMNS,
@@ -50,17 +56,22 @@ async function _GET(request: NextRequest) {
   const admin = createAdminClient()
   const sortColumn = KEY_TO_COLUMN[sortBy] ?? 'created_at'
 
+  // Orden estable: columna elegida + id como desempate, nulos al final.
+  // El inventario tiene cientos de filas con el mismo created_at (cargas
+  // masivas): sin desempate el orden entre páginas era indefinido y el
+  // cursor (que además cortaba por id, ajeno al orden) repetía y saltaba
+  // filas al dar "Cargar más" (ERROR-JOURNAL #37).
   let query = admin
     .from(INVENTARIO_TABLE)
     .select('*')
-    .order(sortColumn, { ascending: sortOrder })
+    .order(sortColumn, { ascending: sortOrder, nullsFirst: false })
+    .order('id', { ascending: sortOrder })
     .limit(perPage + 1)
 
   if (cursor) {
-    if (sortOrder) {
-      query = query.gt('id', cursor)
-    } else {
-      query = query.lt('id', cursor)
+    const decoded = decodeKeysetCursor(cursor)
+    if (decoded) {
+      query = applyKeysetCursor(query, sortColumn, sortOrder, decoded)
     }
   }
 
@@ -113,12 +124,19 @@ async function _GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const hasMore = (data?.length ?? 0) > perPage
-  const items = (data ?? []).map(mapInventarioRow)
-  if (hasMore) items.pop()
+  const rawRows = (data ?? []) as Record<string, unknown>[]
+  const hasMore = rawRows.length > perPage
+  const pageRows = hasMore ? rawRows.slice(0, perPage) : rawRows
+  const items = pageRows.map(mapInventarioRow)
 
-  const nextCursor = hasMore && items.length > 0
-    ? String(items[items.length - 1].id)
+  // El cursor lleva (valor de la columna de orden, id) de la última fila
+  // mostrada, tomados de la fila CRUDA: el corte corre sobre columnas reales.
+  const boundary = hasMore ? pageRows[pageRows.length - 1] : null
+  const nextCursor = boundary
+    ? encodeKeysetCursor({
+        v: cursorValue(boundary[sortColumn]),
+        id: String(boundary.id),
+      })
     : null
 
   return NextResponse.json({

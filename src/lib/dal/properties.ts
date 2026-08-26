@@ -1,89 +1,11 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Property } from '@/types'
 import type { InventarioListItem } from '@/types/inventario'
-import { invalidateFilterOptionsCache, resolveColumnVariants } from '@/lib/dal/filter-options'
-import {
-  INVENTARIO_TABLE,
-  KEY_TO_COLUMN,
-  SEARCH_COLUMNS,
-  mapInventarioRow,
-} from '@/lib/utils/inventario'
+import { invalidateFilterOptionsCache } from '@/lib/dal/filter-options'
+import { INVENTARIO_TABLE, mapInventarioRow } from '@/lib/utils/inventario'
 
-interface PropertyFilters {
-  alcaldia?: string
-  colonia?: string
-  disponibilidad?: string
-  tipo_preventa?: string
-  tipo_entrega?: string
-  precio_min?: number
-  precio_max?: number
-  recamaras_min?: number
-  search?: string
-}
-
-interface PaginatedResult {
-  data: Property[]
-  nextCursor: string | null
-}
-
-export async function getProperties(
-  filters: PropertyFilters = {},
-  cursor?: string,
-  perPage = 20
-): Promise<PaginatedResult> {
-  // inventario_industrial tiene RLS sin políticas (tabla del sistema
-  // Laravel); se lee con service role. Los callers verifican sesión.
-  const supabase = createAdminClient()
-
-  let query = supabase
-    .from(INVENTARIO_TABLE)
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(perPage + 1)
-
-  if (cursor) {
-    query = query.lt('created_at', cursor)
-  }
-
-  // Filtros de catálogo: un valor → todas sus variantes de mayúsculas/acentos en BD
-  const selectFilters = ['alcaldia', 'colonia', 'disponibilidad', 'tipo_preventa', 'tipo_entrega'] as const
-  for (const key of selectFilters) {
-    const value = filters[key]
-    if (value) {
-      query = query.in(KEY_TO_COLUMN[key], await resolveColumnVariants(KEY_TO_COLUMN[key], value))
-    }
-  }
-  if (filters.precio_min) {
-    query = query.gte(KEY_TO_COLUMN.precio_unidad, filters.precio_min)
-  }
-  if (filters.precio_max) {
-    query = query.lte(KEY_TO_COLUMN.precio_unidad, filters.precio_max)
-  }
-  if (filters.search) {
-    const conditions = SEARCH_COLUMNS.map(
-      (c) => `${c}.ilike.%${filters.search}%`
-    ).join(',')
-    query = query.or(conditions)
-  }
-
-  const { data, error } = await query
-
-  if (error) {
-    console.error('Error fetching properties:', error.message)
-    return { data: [], nextCursor: null }
-  }
-
-  const properties = (data ?? []).map(mapInventarioRow) as unknown as Property[]
-  const hasMore = properties.length > perPage
-  if (hasMore) properties.pop()
-
-  return {
-    data: properties,
-    nextCursor: hasMore
-      ? properties[properties.length - 1].created_at
-      : null,
-  }
-}
+// El listado paginado del dashboard vive en GET /api/properties (query
+// inline con paginación keyset — ver lib/dal/keyset-pagination.ts).
 
 export async function getPropertyById(
   id: string
