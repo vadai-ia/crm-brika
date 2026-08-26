@@ -35,6 +35,11 @@ export function useProperties(
     order: 'desc',
   })
   const abortRef = useRef<AbortController>(null)
+  const loadMoreAbortRef = useRef<AbortController>(null)
+  // Época de la lista: cambia con cada búsqueda/filtro/orden nuevo. Una
+  // respuesta de "Cargar más" de una época vieja NUNCA se aplica (llegaría
+  // tarde y anexaría resultados de la búsqueda anterior a la actual).
+  const epochRef = useRef(0)
 
   const buildUrl = useCallback(
     (cursorVal?: string | null) => {
@@ -54,10 +59,12 @@ export function useProperties(
   )
 
   const fetchProperties = useCallback(async () => {
-    // Abort any in-flight request
+    // Nueva época: aborta cualquier request en vuelo (incluido "Cargar más")
     if (abortRef.current) abortRef.current.abort()
+    if (loadMoreAbortRef.current) loadMoreAbortRef.current.abort()
     const controller = new AbortController()
     abortRef.current = controller
+    const epoch = ++epochRef.current
 
     setLoading(true)
     setError(null)
@@ -68,6 +75,7 @@ export function useProperties(
         throw new Error(body.error ?? 'Error al cargar propiedades')
       }
       const json = await res.json()
+      if (epochRef.current !== epoch) return
       setProperties(json.data)
       setHasMore(json.pagination.has_more)
       setCursor(json.pagination.next_cursor)
@@ -80,12 +88,18 @@ export function useProperties(
   }, [buildUrl])
 
   const loadMore = useCallback(async () => {
-    if (!cursor || loadingMore) return
+    // `loading`: el cursor pertenece a la lista anterior mientras hay una
+    // búsqueda en vuelo — ignorar el click en vez de traer la página vieja.
+    if (!cursor || loadingMore || loading) return
+    const controller = new AbortController()
+    loadMoreAbortRef.current = controller
+    const epoch = epochRef.current
     setLoadingMore(true)
     try {
-      const res = await fetch(buildUrl(cursor))
+      const res = await fetch(buildUrl(cursor), { signal: controller.signal })
       if (!res.ok) return
       const json = await res.json()
+      if (epochRef.current !== epoch) return
       setProperties((prev) => [...prev, ...json.data])
       setHasMore(json.pagination.has_more)
       setCursor(json.pagination.next_cursor)
@@ -94,7 +108,7 @@ export function useProperties(
     } finally {
       setLoadingMore(false)
     }
-  }, [cursor, loadingMore, buildUrl])
+  }, [cursor, loadingMore, loading, buildUrl])
 
   useEffect(() => {
     fetchProperties()
