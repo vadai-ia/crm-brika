@@ -118,6 +118,11 @@ export function canGenerateCarta(f: CartaFormState): boolean {
   return f.selectedProperty !== null && f.nombreAsesor.trim() !== '' && f.nombreCliente.trim() !== ''
 }
 
+/** Moneda de la propiedad elegida; MXN si el inventario no la tiene. */
+export function monedaDe(p: CartaProperty | null | undefined): string {
+  return p?.moneda?.trim().toUpperCase() || 'MXN'
+}
+
 export function buildCartaData(f: CartaFormState): CartaPropuestaData {
   const p = f.selectedProperty
   return {
@@ -135,6 +140,7 @@ export function buildCartaData(f: CartaFormState): CartaPropuestaData {
     unidad: f.unidad.trim(),
     municipio: p?.municipio ?? '',
     estado: p?.estado ?? '',
+    moneda: monedaDe(p),
     renta_mensual: toNumber(f.rentaMensual),
     renta_mas_iva: f.rentaMasIva,
     plazo_anios: toNumber(f.plazoAnios),

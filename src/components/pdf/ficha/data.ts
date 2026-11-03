@@ -193,8 +193,10 @@ export function buildFicha(property: Property): FichaData {
   // --- Página 2 ---
   const superficies: FichaRow[] = []
   if (m2Terreno) superficies.push({ label: 'Superficie de terreno', value: `${fmtNum(m2Terreno)} m²` })
-  if (m2Construccion) superficies.push({ label: 'Superficie de construcción', value: `${fmtNum(m2Construccion)} m²` })
-  if (m2Rentables) superficies.push({ label: 'Área rentable', value: `${fmtNum(m2Rentables)} m²` })
+  // Construcción no se imprime aparte (en la práctica = rentable); solo sirve
+  // de respaldo cuando la unidad no tiene área rentable (igual que el front)
+  const m2Rentable = m2Rentables ?? m2Construccion
+  if (m2Rentable) superficies.push({ label: 'Área rentable', value: `${fmtNum(m2Rentable)} m²` })
 
   const especificaciones: FichaRow[] = []
   if (altura) especificaciones.push({ label: 'Altura libre', value: withUnit(altura, 'm') })

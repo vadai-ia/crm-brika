@@ -40,7 +40,7 @@ function drawSection(doc: jsPDF, s: FichaSection, x: number, y: number, w: numbe
   return ry - y
 }
 
-export function renderPage2(doc: jsPDF, ficha: FichaData, logo: string | null): void {
+export function renderPage2(doc: jsPDF, ficha: FichaData, logo: string | null, folio = '02 / 02'): void {
   const mx = MARGIN
   const cw = PAGE_W - mx * 2
 
@@ -205,5 +205,5 @@ export function renderPage2(doc: jsPDF, ficha: FichaData, logo: string | null): 
 
   // Folio
   doc.setFontSize(6.5)
-  doc.text('02 / 02', PAGE_W - mx, fy + 21, { align: 'right' })
+  doc.text(folio, PAGE_W - mx, fy + 21, { align: 'right' })
 }

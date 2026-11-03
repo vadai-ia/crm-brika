@@ -30,6 +30,8 @@ export interface Property {
   fecha_actualizacion: string | null
   disponibilidad: string | null
   precio_unidad: string | null
+  /** Moneda del precio (inventario_industrial.moneda): MXN o USD. */
+  moneda?: string | null
   m2_totales: string | null
   m2_habitables: string | null
   m2_exteriores: string | null

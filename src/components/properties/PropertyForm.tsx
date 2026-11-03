@@ -21,7 +21,9 @@ interface PropertyFormProps {
 
 // Campos numéricos de inventario_industrial
 const NUMERIC_KEYS = [
-  'm2_terreno', 'm2_construccion', 'm2_rentables',
+  // m2_construccion no se captura (en la práctica = rentables) y no se manda:
+  // al editar, el valor que ya tenga la columna se conserva
+  'm2_terreno', 'm2_rentables',
   'precio_venta_m2', 'precio_renta_m2', 'precio_total_venta', 'renta_mensual',
   'mantenimiento_m2', 'mantenimiento_mensual',
 ]
@@ -201,7 +203,6 @@ export function PropertyForm({ property, onClose, onSuccess, onToast }: Property
           <Section title="Superficies">
             <div className="grid grid-cols-2 gap-4">
               <Field label="M² Terreno" error={errors.m2_terreno}>{numberInput('m2_terreno')}</Field>
-              <Field label="M² Construcción" error={errors.m2_construccion}>{numberInput('m2_construccion')}</Field>
               <Field label="M² Rentables" error={errors.m2_rentables}>{numberInput('m2_rentables')}</Field>
               <Field label="Área Base de Cálculo" error={errors.area_base_calculo}>{select('area_base_calculo', AREA_BASE_OPTIONS)}</Field>
             </div>

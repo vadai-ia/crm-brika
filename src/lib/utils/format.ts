@@ -1,15 +1,15 @@
 const priceFormatter = new Intl.NumberFormat('es-MX', {
-  style: 'currency',
-  currency: 'MXN',
   minimumFractionDigits: 0,
   maximumFractionDigits: 0,
 })
 
-export function formatPrice(value: number | string | null | undefined): string {
+/** `$X,XXX,XXX MXN` / `$X,XXX,XXX USD` según la moneda de la propiedad (default MXN). */
+export function formatPrice(value: number | string | null | undefined, moneda?: string | null): string {
   if (value === null || value === undefined || value === '') return 'Consultar precio'
   const num = typeof value === 'string' ? parseFloat(value) : value
   if (isNaN(num) || num === 0) return 'Consultar precio'
-  return `${priceFormatter.format(num)} MXN`
+  const code = moneda?.trim().toUpperCase() || 'MXN'
+  return `$${priceFormatter.format(num)} ${code}`
 }
 
 export function formatM2(value: number | string | null | undefined): string {

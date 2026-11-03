@@ -49,7 +49,7 @@ export async function getInventarioRawById(
 // Las opciones de filtro (valores normalizados) viven en lib/dal/filter-options.ts
 
 const LIST_COLUMNS =
-  'id, parque, unidad, zona_corredor, municipio, estado, ubicacion, producto, tipo_producto, operacion, precio_total_venta, renta_mensual'
+  'id, parque, unidad, zona_corredor, municipio, estado, ubicacion, producto, tipo_producto, operacion, precio_total_venta, renta_mensual, moneda'
 const LIST_PAGE = 1000
 
 function strOrNull(v: unknown): string | null {
@@ -65,7 +65,7 @@ function numOrNull(v: unknown): number | null {
 }
 
 /**
- * Inventario completo en versión ligera (12 columnas) para selectores con
+ * Inventario completo en versión ligera (13 columnas) para selectores con
  * búsqueda en el cliente. Se trae en bloques de 1000 y se ordena por
  * parque y unidad (numérica: "2" antes que "10").
  */
@@ -94,6 +94,7 @@ export async function getInventarioList(): Promise<InventarioListItem[]> {
         operacion: strOrNull(r.operacion),
         precio_total_venta: numOrNull(r.precio_total_venta),
         renta_mensual: numOrNull(r.renta_mensual),
+        moneda: strOrNull(r.moneda),
       })
     }
     if (rows.length < LIST_PAGE) break

@@ -23,6 +23,8 @@ export interface CartaPropuestaData {
   unidad: string
   municipio: string
   estado: string
+  /** Moneda de la propiedad en el inventario (selector MXN / USD). */
+  moneda: string
   // Renta
   renta_mensual: number
   renta_mas_iva: boolean
@@ -162,16 +164,16 @@ function buildRows(d: CartaPropuestaData): CartaRow[] {
 
   if (renta) {
     if (has(d.renta_mensual)) {
-      push('Renta mensual propuesta', `${fmtMoney(d.renta_mensual)} MXN${d.renta_mas_iva ? ' + IVA' : ''}${porM2(d.renta_mensual, d.superficie_m2)}`)
+      push('Renta mensual propuesta', `${fmtMoney(d.renta_mensual)} ${d.moneda}${d.renta_mas_iva ? ' + IVA' : ''}${porM2(d.renta_mensual, d.superficie_m2)}`)
     }
     if (has(d.plazo_anios)) push('Plazo forzoso del contrato', plural(d.plazo_anios, 'año', 'años'))
     if (has(d.deposito_meses)) push('Depósito en garantía', `${plural(d.deposito_meses, 'mes', 'meses')} de renta`)
     push('Incremento anual', d.incremento_anual)
   } else {
-    if (has(d.precio_compra)) push('Precio de compra propuesto', `${fmtMoney(d.precio_compra)} MXN${porM2(d.precio_compra, d.superficie_m2)}`)
+    if (has(d.precio_compra)) push('Precio de compra propuesto', `${fmtMoney(d.precio_compra)} ${d.moneda}${porM2(d.precio_compra, d.superficie_m2)}`)
     push('Forma de pago', d.forma_pago)
     if (has(d.enganche_pct)) {
-      const monto = has(d.precio_compra) ? ` (${fmtMoney((d.precio_compra * d.enganche_pct) / 100)} MXN)` : ''
+      const monto = has(d.precio_compra) ? ` (${fmtMoney((d.precio_compra * d.enganche_pct) / 100)} ${d.moneda})` : ''
       push('Enganche', `${fmtPct(d.enganche_pct)}${monto}`)
     }
   }

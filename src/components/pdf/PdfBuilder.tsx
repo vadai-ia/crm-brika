@@ -15,8 +15,11 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 export function PdfBuilder() {
   const { selectedProperties, count, addProperty, removeProperty, clearSelection } = usePdfSelection()
   const [imageMap, setImageMap] = useState<Record<string, string>>({})
+  // Todas las fotos visibles por propiedad (la ficha las mete en su galería)
+  const [photosMap, setPhotosMap] = useState<Record<string, string[]>>({})
   const [coverMap, setCoverMap] = useState<Record<number, string>>({})
   const [generating, setGenerating] = useState(false)
+  const [loadingPhotos, setLoadingPhotos] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
   const [confirmNew, setConfirmNew] = useState(false)
 
@@ -28,16 +31,25 @@ export function PdfBuilder() {
   // Fetch cover images (Supabase Storage) for selected properties, keyed by id
   useEffect(() => {
     const ids = selectedProperties.map((p) => String(p.id))
-    if (ids.length === 0) { setImageMap({}); return }
+    if (ids.length === 0) { setImageMap({}); setPhotosMap({}); return }
 
+    // Si cambia la selección a media carga, la respuesta vieja se descarta
+    let stale = false
+    setLoadingPhotos(true)
     fetch('/api/pdf/images', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids }),
     })
       .then((r) => r.json())
-      .then((data) => setImageMap(data.images ?? {}))
+      .then((data) => {
+        if (stale) return
+        setImageMap(data.images ?? {})
+        setPhotosMap(data.photos ?? {})
+      })
       .catch(() => {})
+      .finally(() => { if (!stale) setLoadingPhotos(false) })
+    return () => { stale = true }
   }, [selectedProperties])
 
   const doReset = useCallback(() => {
@@ -49,7 +61,7 @@ export function PdfBuilder() {
     if (count === 0) return
     setGenerating(true)
     try {
-      const { blob, filename } = await generateFichaPdf(selectedProperties, imageMap, coverMap)
+      const { blob, filename } = await generateFichaPdf(selectedProperties, imageMap, coverMap, photosMap)
       downloadBlob(blob, filename)
       setToast({ message: 'Ficha descargada', type: 'success' })
       // La selección se limpia DESPUÉS de generar y descargar (pedido del
@@ -61,7 +73,7 @@ export function PdfBuilder() {
     } finally {
       setGenerating(false)
     }
-  }, [count, selectedProperties, imageMap, coverMap, doReset])
+  }, [count, selectedProperties, imageMap, coverMap, photosMap, doReset])
 
   const handlePickCover = useCallback((id: number, dataUrl: string) => {
     setCoverMap((prev) => ({ ...prev, [id]: dataUrl }))
@@ -142,13 +154,15 @@ export function PdfBuilder() {
       {/* Generate button */}
       <button
         onClick={handleGenerate}
-        disabled={count === 0 || generating}
+        disabled={count === 0 || generating || loadingPhotos}
         className="flex items-center justify-center gap-2 w-full h-11 text-sm font-medium rounded-[var(--radius-sm)]
           bg-orange text-white hover:bg-orange-hover disabled:opacity-40 disabled:cursor-not-allowed
           transition-colors cursor-pointer"
       >
         {generating ? (
           <><Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5} /> Generando ficha...</>
+        ) : loadingPhotos ? (
+          <><Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5} /> Cargando fotos...</>
         ) : (
           <><Download className="w-4 h-4" strokeWidth={1.5} /> Generar y Descargar Ficha ({count})</>
         )}

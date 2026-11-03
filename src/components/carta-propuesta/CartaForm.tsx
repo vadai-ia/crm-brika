@@ -5,7 +5,7 @@ import type { CartaFormState, CartaProperty } from '@/types/carta-propuesta'
 import { PropertyPicker } from './PropertyPicker'
 import { OperacionToggle } from './OperacionToggle'
 import { CheckField, NumberField, OPTIONAL_HINT, SectionTitle, TextArea, TextField } from './CartaFormSections'
-import { operacionFromInventario } from './cartaFormState'
+import { monedaDe, operacionFromInventario } from './cartaFormState'
 
 interface CartaFormProps {
   form: CartaFormState
@@ -29,6 +29,7 @@ export function CartaForm({
   form, onChange, onSelectProperty, focusedKey, setFocusedKey, canGenerate, generating, onGenerate,
 }: CartaFormProps) {
   const p = form.selectedProperty
+  const moneda = monedaDe(p)
   const esRenta = form.operacion === 'renta'
   const difiereDeInventario = p?.operacion && operacionFromInventario(p.operacion) !== form.operacion
   const prefilled = p ? (
@@ -98,7 +99,7 @@ export function CartaForm({
         <div className={GRID}>
           {esRenta ? (
             <>
-              {number('rentaMensual', 'Renta mensual propuesta', { suffix: 'MXN', hint: 'La carta agrega el precio por m² si hay superficie.' })}
+              {number('rentaMensual', 'Renta mensual propuesta', { suffix: moneda, hint: 'La carta agrega el precio por m² si hay superficie.' })}
               <CheckField label="Más IVA" checked={form.rentaMasIva} onChange={(v) => onChange('rentaMasIva', v)} hint="Imprime “+ IVA” junto a la renta." />
               {number('plazoAnios', 'Plazo forzoso del contrato', { suffix: 'años' })}
               {number('depositoMeses', 'Depósito en garantía', { suffix: 'meses', hint: 'Se expresa como meses de renta.' })}
@@ -106,7 +107,7 @@ export function CartaForm({
             </>
           ) : (
             <>
-              {number('precioCompra', 'Precio de compra propuesto', { suffix: 'MXN', hint: 'La carta agrega el precio por m² si hay superficie.' })}
+              {number('precioCompra', 'Precio de compra propuesto', { suffix: moneda, hint: 'La carta agrega el precio por m² si hay superficie.' })}
               {text('formaPago', 'Forma de pago', 'Contado / Enganche + financiamiento a X meses')}
               {number('enganchePct', 'Enganche', { suffix: '%', hint: 'La carta calcula el monto sobre el precio propuesto.' })}
             </>

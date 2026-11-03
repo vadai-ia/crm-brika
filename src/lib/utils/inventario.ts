@@ -63,11 +63,12 @@ export function precioListado(item: {
   operacion: string | null
   precio_total_venta: number | null
   renta_mensual: number | null
+  moneda?: string | null
 }): string {
   const esRenta = (item.operacion ?? '').toLowerCase().includes('renta')
-  if (esRenta && item.renta_mensual) return `${formatPrice(item.renta_mensual)} / mes`
-  if (item.precio_total_venta) return formatPrice(item.precio_total_venta)
-  if (item.renta_mensual) return `${formatPrice(item.renta_mensual)} / mes`
+  if (esRenta && item.renta_mensual) return `${formatPrice(item.renta_mensual, item.moneda)} / mes`
+  if (item.precio_total_venta) return formatPrice(item.precio_total_venta, item.moneda)
+  if (item.renta_mensual) return `${formatPrice(item.renta_mensual, item.moneda)} / mes`
   return formatPrice(null)
 }
 
@@ -84,7 +85,9 @@ export function mapInventarioRow(row: Row): Row {
     precio_unidad: precioMostrado(row),
     m2_totales: num(row.m2_terreno),
     m2_habitables: num(row.m2_construccion),
-    m2_exteriores: num(row.m2_rentables),
+    // M² Rentables en el front; si la unidad no lo tiene se usa construcción
+    // (en el inventario suelen ser iguales y construcción ya no se muestra aparte)
+    m2_exteriores: num(row.m2_rentables) ?? num(row.m2_construccion),
     m2_roof_garden: null,
     num_recamaras: null,
     num_banos: null,

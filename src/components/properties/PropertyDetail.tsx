@@ -126,13 +126,10 @@ export function PropertyDetail({ property, role, onClose, onEdit, onDelete, onCr
   // Collect characteristic fields only if they have values
   const chars: { icon: typeof Bed; label: string; value: string }[] = []
   if (show('m2_totales') && hasValue(property.m2_totales)) {
-    chars.push({ icon: Ruler, label: 'M² Totales', value: formatM2(property.m2_totales) })
-  }
-  if (show('m2_habitables') && hasValue(property.m2_habitables)) {
-    chars.push({ icon: Maximize, label: 'M² Habitables', value: formatM2(property.m2_habitables) })
+    chars.push({ icon: Ruler, label: 'M² Terreno', value: formatM2(property.m2_totales) })
   }
   if (show('m2_exteriores') && hasValue(property.m2_exteriores)) {
-    chars.push({ icon: Trees, label: 'M² Exteriores', value: formatM2(property.m2_exteriores) })
+    chars.push({ icon: Maximize, label: 'M² Rentables', value: formatM2(property.m2_exteriores) })
   }
   if (show('m2_roof_garden') && hasValue(property.m2_roof_garden)) {
     chars.push({ icon: Trees, label: 'M² Roof/Jardín', value: formatM2(property.m2_roof_garden) })
@@ -290,7 +287,7 @@ export function PropertyDetail({ property, role, onClose, onEdit, onDelete, onCr
             )}
             {show('precio_unidad') && property.precio_unidad && (
               <span className="text-lg font-bold ml-auto" style={{ color: 'var(--text-primary)' }}>
-                {formatPrice(property.precio_unidad)}
+                {formatPrice(property.precio_unidad, property.moneda)}
               </span>
             )}
           </div>

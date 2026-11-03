@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { KeyboardEvent } from 'react'
-import { Bed, Bath, Ruler, Pencil, Trash2, FilePlus, FileCheck, FileOutput } from 'lucide-react'
+import { Bed, Bath, Ruler, Maximize, Pencil, Trash2, FilePlus, FileCheck, FileOutput } from 'lucide-react'
 import type { Property, UserRole } from '@/types'
 import type { PropertyCover } from '@/types/inventario'
 import { usePropertyImages } from '@/hooks/usePropertyImages'
@@ -181,7 +181,7 @@ export function PropertyCard({
         {/* Price */}
         {show('precio_unidad') && (
           <p className="brika-card-price mb-4">
-            {formatPrice(property.precio_unidad)}
+            {formatPrice(property.precio_unidad, property.moneda)}
           </p>
         )}
 
@@ -200,9 +200,15 @@ export function PropertyCard({
             </span>
           )}
           {show('m2_totales') && property.m2_totales && (
-            <span className="brika-card-spec">
+            <span className="brika-card-spec" title="M² Terreno">
               <Ruler className="w-[14px] h-[14px]" strokeWidth={1.5} />
-              {property.m2_totales} m²
+              {property.m2_totales} m² terreno
+            </span>
+          )}
+          {show('m2_exteriores') && property.m2_exteriores && (
+            <span className="brika-card-spec" title="M² Rentables">
+              <Maximize className="w-[14px] h-[14px]" strokeWidth={1.5} />
+              {property.m2_exteriores} m² rentables
             </span>
           )}
         </div>

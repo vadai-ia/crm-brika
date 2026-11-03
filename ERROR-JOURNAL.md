@@ -232,3 +232,39 @@
 - **Causa:** No había forma de leer un PDF y el proyecto no tiene parser de PDF (y no se instalan dependencias sin pedirlo).
 - **Fix:** Botón "Subir PDF" dentro del modal "Nueva Unidad" (`PdfAutofill`). El PDF va a `POST /api/properties/extract-pdf` (solo admin, igual que crear; máx. 4 MB por el límite de Vercel), que lo manda a la API de Claude (Haiku 5.5, el modelo más barato) por `fetch` (sin SDK) con structured outputs (`lib/services/pdf-extract-service.ts`). Solo se devuelven los campos encontrados; los de `<select>` (operación, estatus, producto, área base, moneda) se normalizan contra las opciones compartidas en `constants.ts` y se descartan si no coinciden. Los campos prellenados quedan con borde naranja y todo sigue editable; se guarda con el flujo normal (Zod + POST). Requiere `ANTHROPIC_API_KEY` en el servidor.
 - **Regla:** Si se agrega un campo al inventario (ver #7), agregarlo también a `TEXT_FIELDS`/`NUMERIC_FIELDS` del extractor para que el PDF lo llene. La IA nunca guarda directo: solo prellena, el asesor revisa y guarda.
+
+## 40. Propiedades en USD se mostraban como MXN en el front
+- **Error:** Al crear/editar una unidad con Moneda = USD, tarjetas, tabla, detalle y selectores seguían mostrando "$X MXN".
+- **Causa:** `formatPrice` (`lib/utils/format.ts`) tenía `MXN` fijo y ninguna vista le pasaba la moneda. El guardado estaba bien: `inventario_industrial.moneda` sí quedaba en `USD`.
+- **Fix:** `formatPrice(value, moneda?)` usa la moneda de la propiedad (default MXN). Se pasa `property.moneda` en PropertyCard, PropertyDetail, PropertyTable y PdfPreview; la lista ligera (`getInventarioList` + `InventarioListItem`) ahora trae `moneda` para `precioListado` (selectores de Ficha PDF y Carta Propuesta).
+- **Regla:** Nunca formatear un precio de inventario sin su moneda: siempre `formatPrice(valor, fila.moneda)`.
+
+## 41. Carta Propuesta escribía "MXN" fijo aunque la propiedad estuviera en USD
+- **Error:** La carta (PDF y Word) y los campos "Renta mensual / Precio de compra propuesto" decían MXN aunque la unidad tuviera Moneda = USD en el inventario.
+- **Causa:** `cartaContent.ts` y `CartaForm.tsx` tenían "MXN" escrito fijo (mismo origen que #40).
+- **Fix:** `CartaPropuestaData.moneda` sale de la propiedad elegida (`monedaDe()` en `cartaFormState.ts`, MXN si viene vacía), usando la `moneda` que ahora trae `getInventarioList` (#40). Se usa en renta, precio de compra y monto de enganche, y en el sufijo de los inputs.
+- **Regla:** Igual que #40: ningún monto de inventario lleva la moneda escrita a mano.
+
+## 42. Ficha PDF: solo salía la portada, no todas las fotos de la propiedad
+- **Error:** Al dar "Generar y Descargar Ficha", el PDF solo traía una foto (la portada) aunque la propiedad tuviera 12 en su galería.
+- **Causa:** El diseño de #10/#24 solo contemplaba la foto de fachada: `/api/pdf/images` devolvía únicamente la portada (`getInventarioImagesByIds`) y `generateFichaPdf` solo dibujaba páginas 1 y 2.
+- **Fix:** DAL `getInventarioPhotosByIds` (`property-images.ts`): todas las fotos **visibles** en el orden elegido (misma regla que la portada; ocultas excluidas). `/api/pdf/images` responde `{ images, photos }` (`images` = la #1, contrato previo). Nuevo `ficha/gallery.ts`: páginas de galería tras la página 2, cuadrícula 2 × 3 por hoja, foto completa con `fitToBox` a 1000 px q0.82 (`fitToBox` acepta ancho y calidad). Folios dinámicos (`01 / 04`…). Con portada manual, todas las fotos de la BD van a la galería. `PdfBuilder` desactiva el botón ("Cargando fotos…") mientras llegan las fotos y descarta respuestas viejas si cambia la selección. Verificado con el arnés de #28 (tsc→CJS + shim de assets con sharp + PyMuPDF) en Spartek 3 / 128: 12 fotos → 4 páginas, 1.2 MB.
+- **Regla:** La ficha usa las fotos visibles del CRM, en su orden: para quitar una foto del PDF se oculta en la galería de la propiedad. No subir la resolución de la galería sin medir el peso (12 fotos a 1600 px q0.9 ≈ 3× el tamaño).
+
+## 43. M² Rentables en el front en vez de M² Construcción
+- **Error:** (Pedido del usuario) Tabla, tarjeta y detalle mostraban "M² Construcción" (y en el detalle etiquetas heredadas de Kibah: "M² Totales", "M² Habitables", "M² Exteriores"); no se veían los m² rentables.
+- **Causa:** Vistas heredadas del fork con alias legacy (`m2_totales`=terreno, `m2_habitables`=construcción, `m2_exteriores`=rentables). En `column_visibility`, `m2_exteriores` estaba oculta para asesores.
+- **Fix:** Tabla: columna "M² Rentables" (`m2_exteriores`) en lugar de construcción. Detalle: "M² Terreno" + "M² Rentables" (sin habitables). Tarjeta: terreno + rentables. `m2_habitables` fuera de `ColumnVisibilityManager`. El mapper usa `m2_rentables ?? m2_construccion` para `m2_exteriores`: verificado (2026-11-03) que de 477 unidades 248 tienen ambos iguales, 41 distintos y 63 solo construcción; sin respaldo esas 63 se quedaban sin m². El cambio de visibilidad para asesores (`m2_exteriores` visible, `m2_habitables` oculta) lo hace el admin en la pantalla de columnas.
+- **Regla:** Antes de decir que dos columnas "son lo mismo", contarlo en la BD. Los alias legacy siguen vigentes: rentables = `m2_exteriores` en el front.
+
+## 44. Formulario "Agregar propiedad": Superficies solo con M² Terreno y M² Rentables
+- **Error:** (Pedido del usuario, aclara #43) La sección Superficies del formulario mostraba M² Construcción además de M² Rentables; el usuario quería solo rentables. En #43 se había interpretado como las vistas de lista y no se tocó el formulario.
+- **Causa:** Malentendido de alcance: "en el front" se refería al modal de alta/edición.
+- **Fix:** `PropertyForm`: fuera el input y `m2_construccion` de `NUMERIC_KEYS`, así que el payload ya no lo manda: al editar, el valor de la columna se conserva (no se borra) y al crear queda null. El extractor de PDF ya no pide `m2_construccion`; `m2_rentables` toma la superficie construida si el documento no da la rentable. BD sin cambios (la columna sigue existiendo).
+- **Regla:** Si una petición dice "en el front" sin pantalla, preguntar o confirmar cuál (formulario vs. listas) antes de tocar varias. Para dejar de capturar una columna, sacarla del payload; no mandarla en null.
+
+## 45. Ficha PDF: fuera la fila "Superficie de construcción"
+- **Error:** (Pedido del usuario, sigue de #44) La página 2 de la ficha imprimía "Superficie de construcción" además de "Área rentable".
+- **Causa:** `ficha/data.ts` armaba la sección Superficies con las tres columnas.
+- **Fix:** Solo "Superficie de terreno" y "Área rentable"; esta última usa `m2_rentables ?? m2_construccion` (respaldo para las unidades sin rentable, igual que el front en #43). Verificado con el arnés de #28 en Spartek 3 / 128 (construcción 529.67, rentables 559.67): la página 2 ya no menciona construcción.
+- **Regla:** `m2_construccion` ya no se muestra en ningún lado del front ni de la ficha; solo vive en la BD, en el export a Excel y como respaldo de rentables.

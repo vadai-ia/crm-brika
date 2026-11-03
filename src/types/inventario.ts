@@ -16,6 +16,7 @@ export interface InventarioListItem {
   operacion: string | null
   precio_total_venta: number | null
   renta_mensual: number | null
+  moneda: string | null
 }
 
 /**

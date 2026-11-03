@@ -64,12 +64,13 @@ export async function cropToCover(b64: string, ratio: number): Promise<string | 
 // desenfocada y oscurecida (para que el título en blanco siga legible).
 // El desenfoque se hace dibujando la foto a ~32 px y reescalándola con
 // suavizado: funciona en todos los navegadores (ctx.filter no en Safari viejo).
-export async function fitToBox(b64: string, ratio: number): Promise<string | null> {
+// `outW` = ancho de salida en px (1600 la portada; menos en la galería para
+// que el PDF no pese de más) y `quality` = calidad JPEG.
+export async function fitToBox(b64: string, ratio: number, outW = 1600, quality = 0.9): Promise<string | null> {
   const img = await loadImg(b64)
   if (!img) return null
   const iw = img.naturalWidth
   const ih = img.naturalHeight
-  const outW = 1600
   const outH = Math.round(outW / ratio)
 
   const canvas = document.createElement('canvas')
@@ -107,7 +108,7 @@ export async function fitToBox(b64: string, ratio: number): Promise<string | nul
   const dw = Math.round(iw * scale)
   const dh = Math.round(ih * scale)
   ctx.drawImage(img, Math.round((outW - dw) / 2), Math.round((outH - dh) / 2), dw, dh)
-  return canvas.toDataURL('image/jpeg', 0.9)
+  return canvas.toDataURL('image/jpeg', quality)
 }
 
 export function dataUrlToBytes(dataUrl: string): Uint8Array {

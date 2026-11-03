@@ -19,7 +19,8 @@ export function renderPage1(
   doc: jsPDF,
   ficha: FichaData,
   heroImg: string | null,
-  logo: string | null
+  logo: string | null,
+  folio = '01 / 02'
 ): void {
   const mx = MARGIN
   const cw = PAGE_W - mx * 2
@@ -159,5 +160,5 @@ export function renderPage1(
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7.5)
   doc.setTextColor(GRAY_LIGHT)
-  doc.text('01 / 02', PAGE_W - mx, fy + 6.5, { align: 'right' })
+  doc.text(folio, PAGE_W - mx, fy + 6.5, { align: 'right' })
 }

@@ -34,7 +34,7 @@ function formatCell(columnName: string, value: unknown, property: Property): Rea
     case 'nombre_kibah':
       return displayValue((property.nombre_kibah || property.nombre_desarrollador) as string | null)
     case 'precio_unidad':
-      return <span className="brika-table-price">{formatPrice(str)}</span>
+      return <span className="brika-table-price">{formatPrice(str, property.moneda)}</span>
     case 'm2_totales':
     case 'm2_habitables':
     case 'm2_exteriores':
@@ -77,7 +77,7 @@ const TABLE_COLUMNS: { column_name: string; display_label: string }[] = [
   { column_name: 'colonia', display_label: 'Zona / Corredor' },
   { column_name: 'alcaldia', display_label: 'Municipio' },
   { column_name: 'm2_totales', display_label: 'M² Terreno' },
-  { column_name: 'm2_habitables', display_label: 'M² Construcción' },
+  { column_name: 'm2_exteriores', display_label: 'M² Rentables' },
   { column_name: 'disponibilidad', display_label: 'Estatus' },
 ]
 

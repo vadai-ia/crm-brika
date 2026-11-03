@@ -119,12 +119,39 @@ export async function getInventarioCoversByIds(
   return map
 }
 
-/** Módulo PDF: solo la URL de portada (versión web), keyed por id. */
-export async function getInventarioImagesByIds(
+/**
+ * Ficha PDF: TODAS las fotos visibles (versión web) por propiedad, en el orden
+ * elegido; la primera es la portada. Si todas están ocultas, la primera del set
+ * (misma regla que la portada de getInventarioCoversByIds).
+ */
+export async function getInventarioPhotosByIds(
   ids: string[]
-): Promise<Record<string, string>> {
-  const covers = await getInventarioCoversByIds(ids)
-  return Object.fromEntries(Object.entries(covers).map(([id, c]) => [id, c.fullUrl]))
+): Promise<Record<string, string[]>> {
+  if (ids.length === 0) return {}
+  const supabase = createAdminClient()
+  const [setByProp, metaByProp] = await Promise.all([
+    getSetIdsByPropertyIds(supabase, ids),
+    getImageMetaByPropertyIds(ids),
+  ])
+
+  const namesBySet = new Map<number, string[]>()
+  await Promise.all(
+    [...new Set(setByProp.values())].map(async (setId) => {
+      namesBySet.set(setId, await listSetImages(supabase, setId))
+    })
+  )
+
+  const map: Record<string, string[]> = {}
+  for (const [propId, setId] of setByProp) {
+    const meta = metaByProp.get(propId)
+    const names = orderNames(namesBySet.get(setId) ?? [], meta)
+    if (names.length === 0) continue
+    const visible = names.filter((n) => meta?.get(n)?.visible !== false)
+    map[propId] = (visible.length > 0 ? visible : names.slice(0, 1)).map((n) =>
+      imageUrl(supabase, setId, n, 'full')
+    )
+  }
+  return map
 }
 
 /** Todas las fotos del set de una propiedad, en su orden, con visibilidad en la web. */

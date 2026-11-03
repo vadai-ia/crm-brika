@@ -53,8 +53,7 @@ const TEXT_FIELDS: Record<string, string> = {
 
 const NUMERIC_FIELDS: Record<string, string> = {
   m2_terreno: 'Superficie de terreno en m²',
-  m2_construccion: 'Superficie construida en m²',
-  m2_rentables: 'Superficie rentable en m²',
+  m2_rentables: 'Superficie rentable en m² (si solo indica la superficie construida, usa esa)',
   precio_venta_m2: 'Precio de venta por m² (solo el número)',
   precio_total_venta: 'Precio total de venta (solo el número)',
   precio_renta_m2: 'Renta mensual por m² (solo el número)',

@@ -17,7 +17,7 @@ const COLUMN_GROUPS: { label: string; columns: string[] }[] = [
   { label: 'Info', columns: ['nombre_kibah', 'nombre_desarrollador', 'unidad', 'disponibilidad', 'fecha_actualizacion'] },
   { label: 'Ubicación', columns: ['direccion', 'colonia', 'alcaldia'] },
   { label: 'Precios', columns: ['precio_unidad'] },
-  { label: 'Características', columns: ['m2_totales', 'm2_habitables', 'm2_exteriores', 'm2_roof_garden', 'num_recamaras', 'num_banos', 'estacionamiento', 'bodega', 'amenidades'] },
+  { label: 'Características', columns: ['m2_totales', 'm2_exteriores', 'm2_roof_garden', 'num_recamaras', 'num_banos', 'estacionamiento', 'bodega', 'amenidades'] },
   { label: 'Entrega', columns: ['tipo_preventa', 'tipo_entrega', 'fecha_entrega'] },
   { label: 'Interno', columns: ['contacto_desarrollador', 'pct_comision', 'link_drive', 'id_propiedad', 'created_at'] },
 ]

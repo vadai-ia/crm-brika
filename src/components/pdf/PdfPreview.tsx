@@ -72,7 +72,7 @@ export function PdfPreview({ properties, imageMap, coverMap, onRemove, onPickCov
                   {displayValue(p.nombre_kibah || p.nombre_desarrollador)}
                 </p>
                 <p className="text-xs text-text-tertiary">
-                  {p.unidad ? `${p.unidad} · ` : ''}{displayValue(p.colonia)} · {formatPrice(p.precio_unidad)}
+                  {p.unidad ? `${p.unidad} · ` : ''}{displayValue(p.colonia)} · {formatPrice(p.precio_unidad, p.moneda)}
                 </p>
               </div>
               <CoverButton id={p.id} hasCover={!!coverMap[p.id]} onPick={onPickCover} />

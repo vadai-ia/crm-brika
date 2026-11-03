@@ -1,7 +1,7 @@
 import { withTechLog } from '@/lib/services/tech-log'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { getInventarioImagesByIds } from '@/lib/dal/property-images'
+import { getInventarioPhotosByIds } from '@/lib/dal/property-images'
 
 async function _POST(request: NextRequest) {
   const supabase = await createClient()
@@ -14,8 +14,11 @@ async function _POST(request: NextRequest) {
     const body = await request.json()
     // ids (uuid) de inventario_industrial; resueltos vía propiedad_image_sets
     const ids: string[] = (body.ids ?? []).map(String).slice(0, 50)
-    const images = await getInventarioImagesByIds(ids)
-    return NextResponse.json({ images })
+    // photos = todas las fotos visibles en orden (galería de la ficha);
+    // images = solo la portada (la #1), contrato previo de la vista previa
+    const photos = await getInventarioPhotosByIds(ids)
+    const images = Object.fromEntries(Object.entries(photos).map(([id, urls]) => [id, urls[0]]))
+    return NextResponse.json({ images, photos })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error'
     return NextResponse.json({ error: message }, { status: 500 })
