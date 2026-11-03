@@ -3,6 +3,14 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import type { Property } from '@/types'
+import { PdfAutofill } from './PdfAutofill'
+import {
+  INVENTARIO_AREA_BASE_OPTIONS as AREA_BASE_OPTIONS,
+  INVENTARIO_ESTATUS_OPTIONS as ESTATUS_OPTIONS,
+  INVENTARIO_MONEDA_OPTIONS as MONEDA_OPTIONS,
+  INVENTARIO_OPERACION_OPTIONS as OPERACION_OPTIONS,
+  INVENTARIO_PRODUCTO_OPTIONS as PRODUCTO_OPTIONS,
+} from '@/lib/utils/constants'
 
 interface PropertyFormProps {
   property?: Property | null
@@ -10,12 +18,6 @@ interface PropertyFormProps {
   onSuccess: () => void
   onToast: (message: string, type: 'success' | 'error') => void
 }
-
-const OPERACION_OPTIONS = ['Venta', 'Renta', 'Preventa', 'Build to Suit']
-const ESTATUS_OPTIONS = ['Disponible', 'Apartado', 'Vendido', 'Rentado', 'No disponible']
-const PRODUCTO_OPTIONS = ['Nave industrial', 'Lote industrial', 'BTS']
-const AREA_BASE_OPTIONS = ['Construcción', 'Terreno']
-const MONEDA_OPTIONS = ['MXN', 'USD']
 
 // Campos numéricos de inventario_industrial
 const NUMERIC_KEYS = [
@@ -87,6 +89,14 @@ export function PropertyForm({ property, onClose, onSuccess, onToast }: Property
     if (errors[key]) setErrors((prev) => { const next = { ...prev }; delete next[key]; return next })
   }
 
+  // "Subir PDF": prellena con lo que encontró la IA; el resto queda como estaba.
+  const [autofilled, setAutofilled] = useState<Set<string>>(new Set())
+  const applyExtracted = (fields: Record<string, string | number>) => {
+    setForm((prev) => ({ ...prev, ...Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, String(v)])) }))
+    setAutofilled(new Set(Object.keys(fields)))
+    setErrors({})
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
@@ -127,7 +137,7 @@ export function PropertyForm({ property, onClose, onSuccess, onToast }: Property
   const inputClass = (key: string) =>
     `w-full h-9 px-3 text-sm rounded-[var(--radius-sm)] border bg-bg-primary text-text-primary
     placeholder:text-text-tertiary transition-colors
-    ${errors[key] ? 'border-red-500' : 'border-border-primary focus:border-orange'}
+    ${errors[key] ? 'border-red-500' : autofilled.has(key) ? 'border-orange/60 focus:border-orange' : 'border-border-primary focus:border-orange'}
     focus:outline-none focus:ring-1 ${errors[key] ? 'focus:ring-red-500' : 'focus:ring-orange/30'}`
 
   const text = (key: string, placeholder = '') => (
@@ -167,6 +177,7 @@ export function PropertyForm({ property, onClose, onSuccess, onToast }: Property
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {!isEdit && <PdfAutofill onExtracted={applyExtracted} onToast={onToast} />}
           <Section title="Identificación">
             <div className="grid grid-cols-2 gap-4">
               <Field label="Parque *" error={errors.parque}>{text('parque', 'ej. Acupark 3')}</Field>

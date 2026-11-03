@@ -67,3 +67,16 @@ export const AUDIT_ENTITY_LABELS: Record<string, string> = {
   desarrollo: 'Desarrollo',
   columnas: 'Columnas',
 }
+
+// "Subir PDF" en el alta de propiedades: extracción de campos con Claude.
+// Haiku 5.5: el modelo más barato (~$0.002 USD por PDF de pocas páginas).
+export const PDF_EXTRACT_MODEL = 'claude-haiku-5-5'
+// Vercel corta los bodies de funciones en 4.5 MB.
+export const PDF_EXTRACT_MAX_BYTES = 4 * 1024 * 1024
+
+// Opciones fijas del formulario de inventario (PropertyForm + extracción de PDF)
+export const INVENTARIO_OPERACION_OPTIONS = ['Venta', 'Renta', 'Preventa', 'Build to Suit']
+export const INVENTARIO_ESTATUS_OPTIONS = ['Disponible', 'Apartado', 'Vendido', 'Rentado', 'No disponible']
+export const INVENTARIO_PRODUCTO_OPTIONS = ['Nave industrial', 'Lote industrial', 'BTS']
+export const INVENTARIO_AREA_BASE_OPTIONS = ['Construcción', 'Terreno']
+export const INVENTARIO_MONEDA_OPTIONS = ['MXN', 'USD']
