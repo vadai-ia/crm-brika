@@ -13,6 +13,12 @@ export function isAuthError(result: AuthResult): result is NextResponse {
   return result instanceof NextResponse
 }
 
+/** ¿El usuario tiene el permiso? (admin siempre). Para ajustar respuestas, no para bloquearlas. */
+export async function userHasPermission(userId: string, permission: string): Promise<boolean> {
+  const perms = await getUserPermissions(userId)
+  return perms._isAdmin === true || perms[permission] === true
+}
+
 export async function requirePermission(permission: string): Promise<AuthResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

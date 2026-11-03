@@ -64,3 +64,25 @@ export function toTitleCase(value: string | null | undefined): string {
     })
     .join(' ')
 }
+
+/**
+ * Comisión tal como viene del Excel: "0.05" → "5%", "3" → "3%",
+ * y los textos ("4 - 5.5%", "3% + IVA") se dejan tal cual.
+ */
+export function formatComisionTexto(value: string | null | undefined): string {
+  if (!value || !value.trim()) return '—'
+  const raw = value.trim()
+  if (!/^\d+(\.\d+)?$/.test(raw)) return raw
+  const n = parseFloat(raw)
+  const pct = n <= 1 ? n * 100 : n
+  return `${Number(pct.toFixed(2))}%`
+}
+
+/** Liga de WhatsApp para un celular mexicano escrito a mano ("(442) 595 7373"). */
+export function whatsappUrl(phone: string | null | undefined): string | null {
+  if (!phone) return null
+  const digits = phone.replace(/\D/g, '')
+  if (digits.length === 10) return `https://wa.me/52${digits}`
+  if (digits.length === 12 && digits.startsWith('52')) return `https://wa.me/${digits}`
+  return null
+}

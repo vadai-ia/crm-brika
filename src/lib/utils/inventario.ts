@@ -138,5 +138,20 @@ export function mapInventarioRow(row: Row): Row {
     notas_tecnicas: row.notas_tecnicas ?? null,
     links_imagenes_carpetas_drive: row.links_imagenes_carpetas_drive ?? null,
     ubicacion: row.ubicacion ?? null,
+    // Contacto del desarrollador/propietario. Solo llega al navegador si el
+    // usuario tiene `contactos.view` (ver stripContacto).
+    contacto: row.contacto ?? null,
+    celular_contacto: row.celular_contacto ?? null,
+    correo_contacto: row.correo_contacto ?? null,
+    comision: row.comision ?? null,
   }
+}
+
+export const CONTACTO_FIELDS = ['contacto', 'celular_contacto', 'correo_contacto', 'comision'] as const
+
+/** Quita el contacto (y la comisión) de una fila mapeada, para usuarios sin `contactos.view`. */
+export function stripContacto<T extends object>(row: T): T {
+  const copy = { ...row } as Record<string, unknown>
+  for (const key of CONTACTO_FIELDS) delete copy[key]
+  return copy as T
 }

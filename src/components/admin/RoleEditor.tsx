@@ -19,6 +19,7 @@ const PERM_LABELS: Record<string, string> = {
   'carta_propuesta.view': 'Generar cartas',
   'carga_masiva.view': 'Usar carga masiva',
   'formularios.view': 'Ver leads',
+  'contactos.view': 'Ver contactos',
 }
 
 interface RoleEditorProps {

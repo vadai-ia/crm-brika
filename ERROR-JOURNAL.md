@@ -268,3 +268,15 @@
 - **Causa:** `ficha/data.ts` armaba la sección Superficies con las tres columnas.
 - **Fix:** Solo "Superficie de terreno" y "Área rentable"; esta última usa `m2_rentables ?? m2_construccion` (respaldo para las unidades sin rentable, igual que el front en #43). Verificado con el arnés de #28 en Spartek 3 / 128 (construcción 529.67, rentables 559.67): la página 2 ya no menciona construcción.
 - **Regla:** `m2_construccion` ya no se muestra en ningún lado del front ni de la ficha; solo vive en la BD, en el export a Excel y como respaldo de rentables.
+
+## 46. Sección "Contactos": `formatComision` duplicado
+- **Error:** (Pedido del usuario: directorio de contactos debajo de "Formularios Web") Al agregar el formateador de la comisión nueva, `tsc` falló con "Duplicate function implementation" en `lib/utils/format.ts`.
+- **Causa:** Ya existía `formatComision(number)` para el campo legacy `pct_comision` (PropertyTable / PropertyDetail). La columna nueva `comision` de `inventario_industrial` es **texto** (viene del Excel como "0.05", "0.025" o "4 - 5.5%"; con `numeric` el import falló con 22P02).
+- **Fix:** El nuevo se llama `formatComisionTexto` ("0.05" → "5%", texto libre tal cual); el legacy no se tocó. Página `/dashboard/contactos` (DAL `lib/dal/contactos.ts` agrupa por parque + contacto, API `/api/contactos` con permiso nuevo `contactos.view`).
+- **Regla:** Antes de crear un helper en `format.ts`, buscar el nombre (`grep`). `comision` es texto: nunca hacer `parseFloat` directo para mostrarla; usar `formatComisionTexto`. Los asesores no ven Contactos hasta que su rol tenga `contactos.view` (admin siempre).
+
+## 47. Propiedades: contacto en la tarjeta y al final del detalle
+- **Error:** (Pedido del usuario) Las tarjetas y el detalle no mostraban el contacto nuevo. El detalle tenía una sección "Contacto" que nunca salía: leía `contacto_desarrollador` / `pct_comision`, que el mapper deja siempre en null (columnas legacy de Kibah). Además `/api/properties` manda todas las columnas al navegador; la visibilidad por columna (`show()`) solo oculta en la UI.
+- **Causa:** Las columnas `contacto`, `celular_contacto`, `correo_contacto`, `comision` se agregaron a la BD (#46) pero `mapInventarioRow` no las exponía.
+- **Fix:** `mapInventarioRow` las expone con su nombre real. `GET /api/properties` y `GET /api/properties/[id]` las quitan con `stripContacto` si el usuario no tiene `contactos.view` (`userHasPermission`). La UI las muestra solo si llegan: `PropertyCardContact` (debajo de los m², pegado al pie de la tarjeta con WhatsApp/llamar/correo) y `PropertyContactSection` (final del detalle: nombre, celular, correo con copiar, comisión con `formatComisionTexto`, link de Drive). Fuera la sección legacy del detalle.
+- **Regla:** Datos sensibles (contacto, comisión) se filtran en el API, no con `show()`/CSS. Si otro endpoint empieza a devolver filas de inventario a no-admins, pasarlas por `stripContacto`.

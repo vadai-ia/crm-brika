@@ -51,6 +51,12 @@ export interface Property {
   pct_comision: number | null
   link_drive: string | null
   nombre_kibah: string | null
+  /** Contacto de inventario_industrial; ausentes si el usuario no tiene `contactos.view`. */
+  contacto?: string | null
+  celular_contacto?: string | null
+  correo_contacto?: string | null
+  /** Texto tal como viene del Excel ("0.05", "4 - 5.5%"): usar formatComisionTexto. */
+  comision?: string | null
 }
 
 export interface ColumnVisibility {

@@ -11,6 +11,7 @@ import { formatPrice, displayValue, capitalize } from '@/lib/utils/format'
 import { PropertyCardCover } from './PropertyCardCover'
 import { PropertyCardGallery } from './PropertyCardGallery'
 import { PhotoRefreshButton } from './PhotoRefreshButton'
+import { PropertyCardContact } from './PropertyCardContact'
 
 function disponibilidadBadge(value: string | null | undefined): string {
   if (!value) return ''
@@ -99,7 +100,7 @@ export function PropertyCard({
         tabIndex={0}
         onClick={openDetail}
         onKeyDown={handleBodyKey}
-        className="flex-1 p-5 text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-orange focus-visible:ring-inset"
+        className="flex-1 flex flex-col p-5 text-left cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-orange focus-visible:ring-inset"
       >
         {/* Actions row — PDF + admin buttons on one line */}
         {(isAdmin || onTogglePdf || onCreatePdf || hasDriveLink) && (
@@ -212,6 +213,9 @@ export function PropertyCard({
             </span>
           )}
         </div>
+
+        {/* Contacto (debajo de los m²); el API solo lo manda con `contactos.view` */}
+        <PropertyCardContact property={property} />
       </div>
     </article>
   )

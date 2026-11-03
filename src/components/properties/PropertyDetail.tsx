@@ -17,9 +17,10 @@ import {
   FileOutput,
 } from 'lucide-react'
 import type { Property, UserRole } from '@/types'
-import { formatPrice, formatM2, formatComision, capitalize } from '@/lib/utils/format'
+import { formatPrice, formatM2, capitalize } from '@/lib/utils/format'
 import { PropertyDetailGallery } from './PropertyDetailGallery'
 import { PhotoRefreshButton } from './PhotoRefreshButton'
+import { PropertyContactSection } from './PropertyContactSection'
 
 interface PropertyDetailProps {
   property: Property
@@ -165,11 +166,6 @@ export function PropertyDetail({ property, role, onClose, onEdit, onDelete, onCr
   if (show('tipo_preventa') && hasValue(property.tipo_preventa)) entregaFields.push({ label: 'Tipo', value: capitalize(property.tipo_preventa) })
   if (show('tipo_entrega') && hasValue(property.tipo_entrega)) entregaFields.push({ label: 'Estado de Obra', value: String(property.tipo_entrega) })
   if (show('fecha_entrega') && hasValue(property.fecha_entrega)) entregaFields.push({ label: 'Fecha de Entrega', value: String(property.fecha_entrega) })
-
-  // Contacto (admin)
-  const contactFields: { label: string; value: React.ReactNode }[] = []
-  if (show('contacto_desarrollador') && hasValue(property.contacto_desarrollador)) contactFields.push({ label: 'Contacto Desarrollador', value: String(property.contacto_desarrollador) })
-  if (show('pct_comision') && hasValue(property.pct_comision)) contactFields.push({ label: 'Comisión', value: formatComision(property.pct_comision) })
 
   return (
     <div
@@ -339,25 +335,8 @@ export function PropertyDetail({ property, role, onClose, onEdit, onDelete, onCr
             </div>
           )}
 
-          {/* Contacto */}
-          {contactFields.length > 0 && (
-            <div className="py-5 border-t" style={{ borderColor: 'rgba(161, 161, 170,0.15)' }}>
-              <SectionTitle title="Contacto" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-                {contactFields.map((f) => <Field key={f.label} label={f.label} value={f.value} />)}
-                {show('link_drive') && property.link_drive && (
-                  <Field
-                    label="Link Drive"
-                    value={
-                      <a href={property.link_drive} target="_blank" rel="noopener noreferrer" className="text-orange hover:underline">
-                        Abrir en Drive
-                      </a>
-                    }
-                  />
-                )}
-              </div>
-            </div>
-          )}
+          {/* Contacto (al final): nombre, celular, correo y comisión */}
+          <PropertyContactSection property={property} showDrive={show('link_drive')} />
         </div>
       </div>
     </div>

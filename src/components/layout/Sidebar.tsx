@@ -7,6 +7,7 @@ import {
   Building2,
   ChevronDown,
   ClipboardList,
+  Contact,
   FileText,
   // Calendar,      // Calendario (oculto)
   // MessageSquare, // Whaapy (oculto)
@@ -140,6 +141,12 @@ export function Sidebar({ role }: { role: UserRole }) {
     { label: 'Leads Proyectos', href: '/dashboard/formularios/leads-proyectos' },
   ]
   const showFormularios = !permsLoading && can('formularios.view')
+  const contactosItem: NavItem = {
+    label: 'Contactos',
+    href: '/dashboard/contactos',
+    icon: <Contact className="w-5 h-5" strokeWidth={1.5} />,
+  }
+  const showContactos = !permsLoading && can('contactos.view')
 
   const adminItems: NavItem[] = [
     // Ocultos a pedido del usuario (2026-08-17) — descomentar para restaurar:
@@ -186,6 +193,8 @@ export function Sidebar({ role }: { role: UserRole }) {
             pathname={pathname}
           />
         )}
+
+        {showContactos && <NavLink item={contactosItem} pathname={pathname} />}
 
         {showAdminSection && (
           <>

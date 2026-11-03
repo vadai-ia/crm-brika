@@ -13,7 +13,8 @@ import {
   snapshotFields,
 } from '@/lib/services/audit-service'
 import { getInventarioRawById, getPropertyById } from '@/lib/dal/properties'
-import { requireAnyPermission, isAuthError } from '@/lib/auth/permissions'
+import { requireAnyPermission, isAuthError, userHasPermission } from '@/lib/auth/permissions'
+import { stripContacto } from '@/lib/utils/inventario'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -34,7 +35,8 @@ async function _GET(
   if (!property) {
     return NextResponse.json({ error: 'Propiedad no encontrada' }, { status: 404 })
   }
-  return NextResponse.json({ data: property })
+  const canContacto = await userHasPermission(auth.userId, 'contactos.view')
+  return NextResponse.json({ data: canContacto ? property : stripContacto(property) })
 }
 
 async function verifyAdmin() {

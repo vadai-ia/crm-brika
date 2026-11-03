@@ -23,7 +23,9 @@ import {
   KEY_TO_COLUMN,
   SEARCH_COLUMNS,
   mapInventarioRow,
+  stripContacto,
 } from '@/lib/utils/inventario'
+import { userHasPermission } from '@/lib/auth/permissions'
 
 async function _GET(request: NextRequest) {
   const supabase = await createClient()
@@ -127,7 +129,12 @@ async function _GET(request: NextRequest) {
   const rawRows = (data ?? []) as Record<string, unknown>[]
   const hasMore = rawRows.length > perPage
   const pageRows = hasMore ? rawRows.slice(0, perPage) : rawRows
-  const items = pageRows.map(mapInventarioRow)
+  // El contacto y la comisión solo viajan a quien puede ver Contactos
+  const canContacto = await userHasPermission(user.id, 'contactos.view')
+  const items = pageRows.map((row) => {
+    const item = mapInventarioRow(row)
+    return canContacto ? item : stripContacto(item)
+  })
 
   // El cursor lleva (valor de la columna de orden, id) de la última fila
   // mostrada, tomados de la fila CRUDA: el corte corre sobre columnas reales.
